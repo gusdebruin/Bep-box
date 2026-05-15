@@ -1,54 +1,82 @@
 using ..Points
 using ..Hierarchy
 using ..Geometry
+
 ############################################################################################
 #                                        Structure                                         #
 ############################################################################################
-"""
-        struct PBoxInfo
 
-    Contains information about the spline degrees and number of elements of a mesh, which is 
-    the basis for the PBox structure. The spline degrees are constructed in such a way that 
-    the degree in dimension i on level 'l-1' is smaller than or equal to the degree in 
+"""
+        struct QBoxInfo
+
+    Contains information about the spline degrees and number of elements of a mesh, which is
+    the basis for the PBox structure. The spline degrees are constructed in such a way that
+    the degree in dimension i on level 'l-1' is smaller than or equal to the degree in
     dimension i on level l.
 """
+struct QBoxInfo{manifold_dim}
+    qbox_size::NTuple{manifold_dim,Int}
+    n_qboxes_level1::NTuple{manifold_dim,Int}
+    refinement_factors::Vector{NTuple{manifold_dim,Int}}
+    geometry::AbstractGeometry
+    active_info::ActiveInfo
+    # function QBoxInfo(qbox_size, n_qboxes_level1)
+    #     n_elements = qbox_size .* n_qboxes_level1
+        
 
-# I don't know when to use where and when not
-# struct PBoxInfo  where{manifold_dim}
-struct PBoxInfo{manifold_dim}
-    n_elements_level1::NTuple{manifold_dim,Int}
-    p_per_level::Vector{NTuple{manifold_dim,Int}}
-
-    function PBoxInfo(n_elements_level1, p_per_level)
-        for i in 1:(length(p_per_level)-1)
-            if any(p_per_level[i] .> p_per_level[i+1])
-                throw(ArgumentError("Spline degrees are not valid, they must be non-decreasing per level."))
-        end
-        return new(n_elements_level1, p_per_level)
-    end
+    #     # for i in 1:(length(p_per_level)-1)
+    #     #     if any(p_per_level[i] .> p_per_level[i+1])
+    #     #         throw(ArgumentError("Spline degrees are not valid, they must be non-decreasing per level."))
+    #     # end
+    #     return new(n_elements_level1, p_per_level)
+    # end
 end
 
 ############################################################################################
 #                                         Getters                                          #
 ############################################################################################
-function get_n_elements_level1(pbox_info::PBoxInfo)
-    return pbox_info.n_elements_level1
+
+function get_n_qboxes_level1(qbox_info::QBoxInfo)
+    return qbox_info.n_qboxes_level1
 end
 
-function get_p(pbox_info::PBoxInfo)
-    return pbox_info.p_per_level
+function get_qbox_size(qbox_info::QBoxInfo)
+    return qbox_info.qbox_size
 end
 
-function get_p(pbox_info::PBoxInfo, level::Int)
-    return get_p(pbox_info)[level]
+function get_qbox_size(qbox_info::PBoxInfo, manifold_dim::Int)
+    return get_qbox_size(qbox_info)[manifold_dim]
 end
 
+function get_qbox_geometry(qbox_info::QBoxInfo)
+    return qbox_info.geometry
+end
+
+function get_qbox_active_info(qbox_info::QBoxInfo)
+    return qbox_info.active_info
+end
+
+function get_refinement_factors(qbox_info::QBoxInfo)
+    return qbox_info.refinement_factors
+end
+
+function get_refinement_factors(qbox_info::QBoxInfo, level::Int)
+    return qbox_info.refinement_factors[level]
+end
+
+function get_n_of_qboxes_of_level(qbox_info::QBoxInfo, level::Int)
+    return get_n_qboxes_level1(qbox_info::QBoxInfo) .* prod(get_refinement_factors(qbox_info::QBoxInfo)[1:(level-1)])
+end
+
+function get_n_of_elements_of_level(qbox_info::QBoxInfo, level::Int)
+    return get_n_of_qboxes_of_level(qbox_info::QBoxInfo, level::Int) .*get_qbox_size(qbox_info::QBoxInfo)
+end
 ############################################################################################
 #                                    Abstract Methods                                      #
 ############################################################################################
 
 """
-	get_pbox_id(hier_id::Int, pbox_info::PBoxInfo, active_info::ActiveInfo, 
+    get_pbox_id(hier_id::Int, pbox_info::PBoxInfo, active_info::ActiveInfo,
         geometry::AbstractGeometry)
 
 Returns the id of the pbox a element 'hier_id' is in. It uses these steps:
@@ -68,31 +96,34 @@ Returns the id of the pbox a element 'hier_id' is in. It uses these steps:
 - `pbox_id::Int`: The pbox ID
 - `level::Int`: The level
 - `patch_id::Int`: The patch ID
-
 """
-
-function get_pbox_id(geometry::AbstractGeometry, hier_id::Int, pbox_info::PBoxInfo, active_info::ActiveInfo)
+function get_qbox_id_hier(hier_id::Int, qbox_info::QBoxInfo)
     # hier_id →  convert_to_level_and_level_id  →  level + level_id
-    level, level_id = convert_to_level_and_level_id(active_info, hier_id)
+    level, level_id = convert_to_level_and_level_id(get_qbox_active_info(qbox_info), hier_id)
 
     # level_id →  get_patch_and_local_element_id  →  patch_id + local_id
-    patch_id, local_element_id = get_patch_and_local_element_id(geometry, level_id)
+    patch_id, local_element_id = get_patch_and_local_element_id(get_qbox_geometry(qbox_info), level_id)
 
-    # find p and n_elements of the correct level
-    p = pbox_info.p_per_level[level]  # NTuple{manifold_dim,Int}
-    n_elements = pbox_info.n_elements_level1 .* (2^(level-1))
+    qbox_id= get_qbox_id_local(local_element_id, qbox_info, level)
 
-    # p + n_elements + local_id → pbox_id
+    return qbox_id, level, patch_id
+end
+
+function get_qbox_id_local(local_id::Int, qbox_info::QBoxInfo, level::Int)
+    # find qbox size and n_elements of the correct level
+    size_qbox = get_qbox_size(qbox_info)  # NTuple{manifold_dim,Int}
+    n_elements = get_n_of_elements_of_level(qbox_info, level)
+
+    # qbox_size + n_elements + local_id → qbox_id
     coords = CartesianIndices(n_elements)[local_element_id]
-    pbox_coords = ntuple(i -> (coords[i] - 1) ÷ p[i] + 1, length(p))
-    n_pboxes = ntuple(i -> n_elements[i] ÷ p[i], length(p)) 
-    pbox_id = LinearIndices(n_pboxes)[pbox_coords]
-
-    return pbox_id, level, patch_id
+    qbox_coords = ntuple(i -> (coords[i] - 1) ÷ size_qbox[i] + 1, length(size_qbox))
+    n_qboxes = get_n_of_qboxes_of_level(qbox_info, level) 
+    qbox_id = LinearIndices(n_qboxes)[qbox_coords]
+    return qbox_id
 end
 
 """
-    get_pbox_element_ids(geometry::AbstractGeometry, pbox_id::Int, pbox_info::PBoxInfo, 
+    get_pbox_element_ids(geometry::AbstractGeometry, pbox_id::Int, pbox_info::PBoxInfo,
         level::Int, patch_id::Int)
 
 Returns the ids of the elements of a pbox 'pbox_id'.
@@ -107,7 +138,6 @@ Returns the ids of the elements of a pbox 'pbox_id'.
 
 # Returns
 - `ids::Vector{Int}`: Returns a Vector{Int} with the level-local element IDs
-
 """
 function get_pbox_element_ids(geometry::AbstractGeometry, pbox_id::Int, pbox_info::PBoxInfo, level::Int, patch_id::Int)
     p = pbox_info.p_per_level[level]
@@ -140,8 +170,6 @@ pboxes in which 'pbox_id' has been refined to in the next level.
 - `children::Vector{Int}`: Returns a Vector{Int} with IDs of the children
 
 """
-
-
 function child_pbox_ids(pbox_info::PBoxInfo, level::Int, pbox_id::Int)
     p = pbox_info.p_per_level[level]
     n_elements = pbox_info.n_elements_level1 .* (2^(level-1))
@@ -165,8 +193,9 @@ end
 ############################################################################################
 #                                       Refinement                                         #
 ############################################################################################
+
 """
-	find_pbox_and_refine(geometry::AbstractGeometry, active_info::ActiveInfo, 
+	find_pbox_and_refine!(geometry::AbstractGeometry, active_info::ActiveInfo, 
         pbox_info::PBoxInfo, errors::Vector{Tuple{Int, Float64}}, type::Symbol = :mean)
 
 This function is called when tests have been run with a specific hierarchical and active 
@@ -188,8 +217,7 @@ found the functionrefine_pbox! is called.
     Mean is the default type.
 
 """
-
-function find_pbox_and_refine(geometry::AbstractGeometry, active_info::ActiveInfo, pbox_info::PBoxInfo, errors::Vector{Tuple{Int, Float64}}, type::Symbol = :mean)
+function find_pbox_and_refine!(geometry::AbstractGeometry, active_info::ActiveInfo, pbox_info::PBoxInfo, errors::Vector{Tuple{Int, Float64}}, type::Symbol = :mean)
     if type === :mean
         pbox_errors = Dict{Tuple{Int,Int,Int}, Vector{Float64}}()
         for (hier_id, error) in errors
@@ -206,11 +234,11 @@ function find_pbox_and_refine(geometry::AbstractGeometry, active_info::ActiveInf
         throw(ArgumentError("Unknown refinement type: $type"))
     end
     pbox_id, level, patch_id = pbox_to_refine
-    refine_pbox(geometry, active_info, pbox_info, level, patch_id, pbox_id)
+    refine_pbox!(geometry, active_info, pbox_info, level, patch_id, pbox_id)
 end
 
 """
-	refine_pbox(geometry::AbstractGeometry, active_info::ActiveInfo, pbox_info::PBoxInfo, 
+	refine_pbox!(geometry::AbstractGeometry, active_info::ActiveInfo, pbox_info::PBoxInfo, 
         level::Int, patch_id::Int, pbox_id::Int)
 
 It finds the elements of the pbox 'pbox_id' that needs to be refined. And it finds all the 
@@ -227,7 +255,7 @@ the children will be set to active, and the elements of the pbox no longer.
 - `pbox_id::Int`: The pbox ID of the pbox that we want to refine.
 
 """
-function refine_pbox(geometry::AbstractGeometry, active_info::ActiveInfo, pbox_info::PBoxInfo, level::Int, patch_id::Int, pbox_id::Int)
+function refine_pbox!(geometry::AbstractGeometry, active_info::ActiveInfo, pbox_info::PBoxInfo, level::Int, patch_id::Int, pbox_id::Int)
     remove = get_pbox_element_ids(geometry, pbox_id, pbox_info, level, patch_id)
     children = child_pbox_ids(pbox_info, level, pbox_id)
     add = Int[]  
@@ -235,5 +263,4 @@ function refine_pbox(geometry::AbstractGeometry, active_info::ActiveInfo, pbox_i
         append!(add, get_pbox_element_ids(geometry, child, pbox_info, level+1, patch_id))
     end
     update!(active_info, level, remove, add)
-end
 end
