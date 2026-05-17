@@ -64,13 +64,46 @@ function get_refinement_factors(qbox_info::QBoxInfo, level::Int)
     return qbox_info.refinement_factors[level]
 end
 
-function get_n_of_qboxes_of_level(qbox_info::QBoxInfo, level::Int)
-    return get_n_qboxes_level1(qbox_info::QBoxInfo) .* prod(get_refinement_factors(qbox_info::QBoxInfo)[1:(level-1)])
+"""
+get_n_qboxes_dim(qbox_info::QBoxInfo, level::Int)
+Returns a tuple with the number of qboxes per dimension of a certain level
+"""
+function get_n_qboxes_dim(qbox_info::QBoxInfo, level::Int)
+    n_qboxes = get_n_qboxes_level1(qbox_info)
+    refinement = get_refinement_factors(qbox_info)
+    if level == 1
+        return n_qboxes
+    end
+    for rf in refinement[1:(level-1)]
+        n_qboxes = ntuple(i -> n_qboxes[i] * rf[i], length(n_qboxes))
+    end
+    return n_qboxes
 end
 
-function get_n_of_elements_of_level(qbox_info::QBoxInfo, level::Int)
-    return get_n_of_qboxes_of_level(qbox_info::QBoxInfo, level::Int) .*get_qbox_size(qbox_info::QBoxInfo)
+"""
+get_n_qboxes_total(qbox_info::QBoxInfo, level::Int)
+returns the total number of qboxes in on that level
+"""
+function get_n_qboxes_total(qbox_info::QBoxInfo, level::Int)
+    return prod(get_n_qboxes_dim(qbox_info, level))
 end
+
+"""
+get_n_elements_dim(qbox_info::QBoxInfo, level::Int)
+Returns a tuple with the number of elements per dimension of a certain level
+"""
+function get_n_elements_dim(qbox_info::QBoxInfo, level::Int)
+    return get_n_qboxes_dim(qbox_info, level) .* get_qbox_size(qbox_info)
+end
+
+"""
+get_n_elements_total(qbox_info::QBoxInfo, level::Int)
+returns the total number of elements in on that level
+"""
+function get_n_elements_total(qbox_info::QBoxInfo, level::Int)
+    return prod(get_n_elements_dim(qbox_info, level))
+end
+
 ############################################################################################
 #                                    Abstract Methods                                      #
 ############################################################################################
@@ -117,7 +150,7 @@ function get_qbox_id_local(local_element_id::Int, qbox_info::QBoxInfo, level::In
     # qbox_size + n_elements + local_id → qbox_id
     coords = CartesianIndices(n_elements)[local_element_id]
     qbox_coords = ntuple(i -> (coords[i] - 1) ÷ size_qbox[i] + 1, length(size_qbox))
-    n_qboxes = get_n_of_qboxes_of_level(qbox_info, level) 
+    n_qboxes = get_n_qboxes_dim(qbox_info, level) 
     qbox_id = LinearIndices(n_qboxes)[qbox_coords]
     return qbox_id
 end
@@ -142,7 +175,7 @@ Returns the ids of the elements of a pbox 'pbox_id'.
 function get_qbox_element_ids(qbox_id::Int, qbox_info::QBoxInfo, level::Int, patch_id::Int)
     q = get_qbox_size(qbox_info)    
     n_elements = get_n_of_elements_of_level(qbox_info, level)
-    n_qboxes = get_n_of_qboxes_of_level(qbox_info, level)
+    n_qboxes = get_n_qboxes_dim(qbox_info, level)
     qbox_coords = CartesianIndices(n_qboxes)[qbox_id]
 
     ids = Int[]
@@ -173,8 +206,8 @@ pboxes in which 'pbox_id' has been refined to in the next level.
 """
 function child_qbox_ids(qbox_info::QBoxInfo, level::Int, qbox_id::Int)
     refinement = get_refinement_factors(qbox_info, level)
-    n_qboxes_parent = get_n_of_qboxes_of_level(qbox_info, level)
-    n_qboxes_child  = get_n_of_qboxes_of_level(qbox_info, level + 1)
+    n_qboxes_parent = get_n_qboxes_dim(qbox_info, level)
+    n_qboxes_child  = get_n_qboxes_dim(qbox_info, level + 1)
     
     qbox_coords = CartesianIndices(n_qboxes_parent)[qbox_id]
 
@@ -189,55 +222,11 @@ function child_qbox_ids(qbox_info::QBoxInfo, level::Int, qbox_id::Int)
     end
 
     return children
-
 end
 
 ############################################################################################
 #                                       Refinement                                         #
 ############################################################################################
-
-"""
-	find_pbox_and_refine!(geometry::AbstractGeometry, active_info::ActiveInfo, 
-        pbox_info::PBoxInfo, errors::Vector{Tuple{Int, Float64}}, type::Symbol = :mean)
-
-This function is called when tests have been run with a specific hierarchical and active 
-order for p-boxes and you want to know which pbox should be more refined. This is based on 
-the pbox with the highest error. There are two ways you can define the highest error; mean 
-or max. With mean, the average error for every pbox is calculated, and the pbox with the 
-highest error will be refined. With max, the pbox corresponding to the element with the 
-highest error will be refined. Mean is the default type. When the correct pbox te refine is 
-found the functionrefine_pbox! is called.
-
-# Arguments
-- `geometry::AbstractGeometry`: The multi-patch geometry.
-- `active_info::ActiveInfo`: The active elements per level.
-- `pbox_info::PBoxInfo`: The info of the pbox (contains spline degrees and number of 
-    elements of the first level)
-- `errors::Vector{Tuple{Int, Float64}}`: An vector with per hierarchical element ID the 
-    error corresponding to that element.
-- `type::Symbol`: The type of refinement, there are two options, mean and max. 
-    Mean is the default type.
-
-"""
-function find_pbox_and_refine!(geometry::AbstractGeometry, active_info::ActiveInfo, pbox_info::PBoxInfo, errors::Vector{Tuple{Int, Float64}}, type::Symbol = :mean)
-    if type === :mean
-        pbox_errors = Dict{Tuple{Int,Int,Int}, Vector{Float64}}()
-        for (hier_id, error) in errors
-            pbox_id, level, patch_id = get_pbox_id(geometry, hier_id, pbox_info, active_info)
-            push!(get!(pbox_errors, (pbox_id, level, patch_id), Float64[]), error)
-        end
-        mean_errors = Dict(key => mean(errs) for (key, errs) in pbox_errors)
-        pbox_to_refine = argmax(mean_errors)
-    elseif type === :max
-        idx = argmax(x -> x[2], errors)
-        hier_id = errors[idx][1]
-        pbox_to_refine = get_pbox_id(geometry, hier_id, pbox_info, active_info)
-    else
-        throw(ArgumentError("Unknown refinement type: $type"))
-    end
-    pbox_id, level, patch_id = pbox_to_refine
-    refine_pbox!(geometry, active_info, pbox_info, level, patch_id, pbox_id)
-end
 
 """
 	refine_pbox!(geometry::AbstractGeometry, active_info::ActiveInfo, pbox_info::PBoxInfo, 
