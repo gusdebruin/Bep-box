@@ -257,12 +257,14 @@ the children will be set to active, and the elements of the pbox no longer.
 - `pbox_id::Int`: The pbox ID of the pbox that we want to refine.
 
 """
-function refine_pbox!(geometry::AbstractGeometry, active_info::ActiveInfo, pbox_info::PBoxInfo, level::Int, patch_id::Int, pbox_id::Int)
-    remove = get_pbox_element_ids(geometry, pbox_id, pbox_info, level, patch_id)
-    children = child_pbox_ids(pbox_info, level, pbox_id)
+function refine_qbox!(qbox_info::QBoxInfo, level::Int, patch_id::Int, qbox_id::Int)
+    active = get_qbox_active_info(qbox_info)
+    remove = get_qbox_element_ids(qbox_id, qbox_info, level, patch_id)
+
+    children = child_qbox_ids(qbox_info, level, qbox_id)
     add = Int[]  
     for child in children
-        append!(add, get_pbox_element_ids(geometry, child, pbox_info, level+1, patch_id))
+        append!(add, get_qbox_element_ids(child, qbox_info, level+1, patch_id))
     end
-    update!(active_info, level, remove, add)
+    update!(active, level, remove, add)
 end
