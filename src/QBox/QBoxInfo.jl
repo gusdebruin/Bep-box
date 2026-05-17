@@ -44,12 +44,12 @@ function get_qbox_size(qbox_info::QBoxInfo)
     return qbox_info.qbox_size
 end
 
-function get_qbox_size(qbox_info::PBoxInfo, manifold_dim::Int)
-    return get_qbox_size(qbox_info)[manifold_dim]
-end
-
 function get_qbox_geometry(qbox_info::QBoxInfo)
     return qbox_info.geometry
+end
+
+function get_qbox_size(qbox_info::QBoxInfo, manifold_dim::Int)
+    return get_qbox_size(qbox_info)[manifold_dim]
 end
 
 function get_qbox_active_info(qbox_info::QBoxInfo)
@@ -109,7 +109,7 @@ function get_qbox_id_hier(hier_id::Int, qbox_info::QBoxInfo)
     return qbox_id, level, patch_id
 end
 
-function get_qbox_id_local(local_id::Int, qbox_info::QBoxInfo, level::Int)
+function get_qbox_id_local(local_element_id::Int, qbox_info::QBoxInfo, level::Int)
     # find qbox size and n_elements of the correct level
     size_qbox = get_qbox_size(qbox_info)  # NTuple{manifold_dim,Int}
     n_elements = get_n_of_elements_of_level(qbox_info, level)
@@ -139,17 +139,18 @@ Returns the ids of the elements of a pbox 'pbox_id'.
 # Returns
 - `ids::Vector{Int}`: Returns a Vector{Int} with the level-local element IDs
 """
-function get_pbox_element_ids(geometry::AbstractGeometry, pbox_id::Int, pbox_info::PBoxInfo, level::Int, patch_id::Int)
-    p = pbox_info.p_per_level[level]
-    n_elements = pbox_info.n_elements_level1 .* (2^(level-1))
-    n_pboxes = ntuple(i -> n_elements[i] ÷ p[i], length(p)) 
-    pbox_coords = CartesianIndices(n_pboxes)[pbox_id]
+function get_qbox_element_ids(qbox_id::Int, qbox_info::QBoxInfo, level::Int, patch_id::Int)
+    q = get_qbox_size(qbox_info)    
+    n_elements = get_n_of_elements_of_level(qbox_info, level)
+    n_qboxes = get_n_of_qboxes_of_level(qbox_info, level)
+    qbox_coords = CartesianIndices(n_qboxes)[qbox_id]
 
     ids = Int[]
-    element_ranges = ntuple(i -> (pbox_coords[i]-1)*p[i]+1 : pbox_coords[i]*p[i], length(p))
+    element_ranges = ntuple(i -> (qbox_coords[i]-1)*q[i]+1 : qbox_coords[i]*q[i], length(q))
+    geom = get_qbox_geometry(qbox_info)
     for element_coords in Iterators.product(element_ranges...)
         element_local_id = LinearIndices(n_elements)[element_coords...]
-        element_level_id = get_global_element_id(geometry, patch_id, element_local_id)
+        element_level_id = get_global_element_id(geom, patch_id, element_local_id)
         push!(ids, element_level_id)
     end
     return ids
@@ -170,19 +171,20 @@ pboxes in which 'pbox_id' has been refined to in the next level.
 - `children::Vector{Int}`: Returns a Vector{Int} with IDs of the children
 
 """
-function child_pbox_ids(pbox_info::PBoxInfo, level::Int, pbox_id::Int)
-    p = pbox_info.p_per_level[level]
-    n_elements = pbox_info.n_elements_level1 .* (2^(level-1))
-    n_pboxes = ntuple(i -> n_elements[i] ÷ p[i], length(p)) 
-    pbox_coords = CartesianIndices(n_pboxes)[pbox_id]
+function child_qbox_ids(qbox_info::QBoxInfo, level::Int, qbox_id::Int)
+    refinement = get_refinement_factors(qbox_info, level)
+    n_qboxes_parent = get_n_of_qboxes_of_level(qbox_info, level)
+    n_qboxes_child  = get_n_of_qboxes_of_level(qbox_info, level + 1)
+    
+    qbox_coords = CartesianIndices(n_qboxes_parent)[qbox_id]
 
-    n_pboxes_child = ntuple(i -> 2 * n_pboxes[i], length(p))
-    offsets = Iterators.product(ntuple(_ -> 0:1, length(p))...)
+    offset_ranges = ntuple(i -> 0:(refinement[i]-1), length(refinement))
+    offsets = Iterators.product(offset_ranges...)
 
     children = Int[]
     for off in offsets
-        child_coords = ntuple(i -> 2*(pbox_coords[i]-1) + off[i] + 1, length(p))
-        child_id = LinearIndices(n_pboxes_child)[child_coords...]
+        child_coords = ntuple(i -> (qbox_coords[i]-1)*refinement[i] + off[i] + 1, length(refinement))
+        child_id = LinearIndices(n_qboxes_child)[child_coords...]
         push!(children, child_id)
     end
 
