@@ -1,9 +1,9 @@
 """
-        module PBoxInfo
+        module QBoxInfo
 
-    Contains all methods related with the pbox refinement scheme. 
+    Contains all methods related with the qbox refinement scheme. 
 """
 
-module PBox
-    include("PBoxInfo.jl")
+module QBox
+    include("QBoxInfo.jl")
 end
