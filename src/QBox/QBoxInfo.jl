@@ -20,18 +20,40 @@ struct QBoxInfo{manifold_dim}
     refinement_factors::Vector{NTuple{manifold_dim,Int}}
     geometry::AbstractGeometry
     active_info::ActiveInfo
-    # function QBoxInfo(qbox_size, n_qboxes_level1)
-    #     n_elements = qbox_size .* n_qboxes_level1
-        
-
-    #     # for i in 1:(length(p_per_level)-1)
-    #     #     if any(p_per_level[i] .> p_per_level[i+1])
-    #     #         throw(ArgumentError("Spline degrees are not valid, they must be non-decreasing per level."))
-    #     # end
-    #     return new(n_elements_level1, p_per_level)
-    # end
 end
 
+"""
+A function where a list of starting and endpoints per patch is given and qbox_size, n_qboxes_level1, that calculates breakpoints per patch and creates those patches. 
+"""
+function make_cartesian_patch(qbox_size, n_qboxes_level1, starts, ends)
+    d = length(qbox_size)
+    n_elements = ntuple(i -> qbox_size[i] * n_qboxes_level1[i], d)
+    breaks = ntuple(i -> collect(range(starts[i], ends[i], length = n_elements[i] + 1)), d)
+    return CartesianGeometry((breaks))
+end
+
+function make_qbox_geometry(qbox_size, n_qboxes_level1, starts_list, ends_list)
+    patches = AbstractGeometry[]
+    for (starts, ends) in zip(starts_list, ends_list)
+        push!(patches, make_cartesian_patch(qbox_size, n_qboxes_level1, starts, ends))
+    end
+    return Geometry(patches)
+end
+
+function QBoxInfo(qbox_size::NTuple{manifold_dim,Int},
+                  n_qboxes_level1::NTuple{manifold_dim,Int},
+                  starts_list::Vector{NTuple{manifold_dim,Float64}},
+                  ends_list::Vector{NTuple{manifold_dim,Float64}},
+                  refinement_factors::Vector{NTuple{manifold_dim,Int}}) where {manifold_dim}
+    geom = make_qbox_geometry(qbox_size, n_qboxes_level1, starts_list, ends_list)
+
+    n_elements_dim = ntuple(i -> qbox_size[i] * n_qboxes_level1[i], manifold_dim)
+    total_elements_per_patch = prod(n_elements_dim)
+    total_elements = total_elements_per_patch * length(starts_list)
+
+    active = ActiveInfo([collect(1:total_elements)])
+    return QBoxInfo{manifold_dim}(qbox_size, n_qboxes_level1, refinement_factors, geom, active)
+end
 ############################################################################################
 #                                         Getters                                          #
 ############################################################################################
@@ -145,7 +167,7 @@ end
 function get_qbox_id_local(local_element_id::Int, qbox_info::QBoxInfo, level::Int)
     # find qbox size and n_elements of the correct level
     size_qbox = get_qbox_size(qbox_info)  # NTuple{manifold_dim,Int}
-    n_elements = get_n_of_elements_of_level(qbox_info, level)
+    n_elements = get_n_elements_dim(qbox_info, level)
 
     # qbox_size + n_elements + local_id → qbox_id
     coords = CartesianIndices(n_elements)[local_element_id]
@@ -174,7 +196,7 @@ Returns the ids of the elements of a pbox 'pbox_id'.
 """
 function get_qbox_element_ids(qbox_id::Int, qbox_info::QBoxInfo, level::Int, patch_id::Int)
     q = get_qbox_size(qbox_info)    
-    n_elements = get_n_of_elements_of_level(qbox_info, level)
+    n_elements = get_n_elements_dim(qbox_info, level)
     n_qboxes = get_n_qboxes_dim(qbox_info, level)
     qbox_coords = CartesianIndices(n_qboxes)[qbox_id]
 
