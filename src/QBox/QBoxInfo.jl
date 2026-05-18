@@ -23,7 +23,8 @@ struct QBoxInfo{manifold_dim}
 end
 
 """
-A function where a list of starting and endpoints per patch is given and qbox_size, n_qboxes_level1, that calculates breakpoints per patch and creates those patches. 
+        make_cartesian_patch(qbox_size, n_qboxes_level1, starts, ends)
+A function that creates a Cartesian patch for given start and end points. 
 """
 function make_cartesian_patch(qbox_size, n_qboxes_level1, starts, ends)
     d = length(qbox_size)
@@ -32,6 +33,10 @@ function make_cartesian_patch(qbox_size, n_qboxes_level1, starts, ends)
     return CartesianGeometry((breaks))
 end
 
+"""
+        make_qbox_geometry(qbox_size, n_qboxes_level1, starts_list, ends_list)
+A function that creates a geometry consisting of multiple cartesian patches. 
+"""
 function make_qbox_geometry(qbox_size, n_qboxes_level1, starts_list, ends_list)
     patches = AbstractGeometry[]
     for (starts, ends) in zip(starts_list, ends_list)
@@ -40,6 +45,15 @@ function make_qbox_geometry(qbox_size, n_qboxes_level1, starts_list, ends_list)
     return Geometry(patches)
 end
 
+"""
+        QBoxInfo(qbox_size::NTuple{manifold_dim,Int},
+                  n_qboxes_level1::NTuple{manifold_dim,Int},
+                  starts_list::Vector{NTuple{manifold_dim,Float64}},
+                  ends_list::Vector{NTuple{manifold_dim,Float64}},
+                  refinement_factors::Vector{NTuple{manifold_dim,Int}}) where {manifold_dim}
+A function that constructs a QBoxInfo over a geometry, could be multi-patch. 
+All patches have the same qbox_size and n_qboxes_level1. 
+"""
 function QBoxInfo(qbox_size::NTuple{manifold_dim,Int},
                   n_qboxes_level1::NTuple{manifold_dim,Int},
                   starts_list::Vector{NTuple{manifold_dim,Float64}},
@@ -54,6 +68,7 @@ function QBoxInfo(qbox_size::NTuple{manifold_dim,Int},
     active = ActiveInfo([collect(1:total_elements)])
     return QBoxInfo{manifold_dim}(qbox_size, n_qboxes_level1, refinement_factors, geom, active)
 end
+
 ############################################################################################
 #                                         Getters                                          #
 ############################################################################################
@@ -66,12 +81,12 @@ function get_qbox_size(qbox_info::QBoxInfo)
     return qbox_info.qbox_size
 end
 
-function get_qbox_geometry(qbox_info::QBoxInfo)
-    return qbox_info.geometry
-end
-
 function get_qbox_size(qbox_info::QBoxInfo, manifold_dim::Int)
     return get_qbox_size(qbox_info)[manifold_dim]
+end
+
+function get_qbox_geometry(qbox_info::QBoxInfo)
+    return qbox_info.geometry
 end
 
 function get_qbox_active_info(qbox_info::QBoxInfo)
