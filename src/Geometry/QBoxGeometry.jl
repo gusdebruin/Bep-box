@@ -26,10 +26,46 @@ struct QBoxGeometry{manifold_dim, image_dim, num_patches, HG} <:
     end
 end
 
-function QBoxGeometry(geom::AbstractGeometry{manifold_dim, image_dim, num_patches}, 
+function refine_geometry(geom::AbstractGeometry{manifold_dim, image_dim, num_patches}, 
     qbox_size::NTuple{manifold_dim,Int}) where {manifold_dim, image_dim, num_patches}
-    refined_geom = subdivide_geometry(geom, qbox_size) #from which module is this??
-    n_elements = get_lin_num_elements(refined_geom) #from which module is this??
+    patches = get_num_patches(geom)
+    refined_patches = Vector{AbstractGeometry}(undef, patches)
+    i=1
+    n_elements = 0
+    for patch in 1:patches
+        patch_geom = get_parametric_geometry(geom, patch)
+        refined_geom = subdivide_geometry(patch_geom, qbox_size)
+        n_elements +=get_lin_num_elements(refined_geom)
+        refined_patches[i]=refined_geom
+        i +=1
+    end
+    return refined_patches, n_elements
+end
+
+function QBoxGeometry(geom::CartesianGeometry{manifold_dim, image_dim, num_patches}, 
+    qbox_size::NTuple{manifold_dim,Int}) where {manifold_dim, image_dim, num_patches}
+    refined_patches, n_elements = refine_geometry(geom, qbox_size)
+    refined_geom = MultiPatchGeometry((refined_patches...))
+    active_elements = Hierarchy.ActiveInfo([collect(1:n_elements)])
+    hier_geom = HierarchicalGeometry((refined_geom,), active_elements)
+    return QBoxGeometry(hier_geom, qbox_size)
+end
+
+function QBoxGeometry(geom::MappedGeometry{manifold_dim, image_dim, num_patches}, 
+    qbox_size::NTuple{manifold_dim,Int}) where {manifold_dim, image_dim, num_patches}
+    mapping = get_mapping(geom)
+    refined_patches, n_elements = refine_geometry(geom, qbox_size)
+    refined_geom = MappedGeometry(MultiPatchGeometry((refined_patches...)), mapping)
+    active_elements = Hierarchy.ActiveInfo([collect(1:n_elements)])
+    hier_geom = HierarchicalGeometry((refined_geom,), active_elements)
+    return QBoxGeometry(hier_geom, qbox_size)
+end
+
+function QBoxGeometry(geom::MaskedGeometry{manifold_dim, image_dim, num_patches}, 
+    qbox_size::NTuple{manifold_dim,Int}) where {manifold_dim, image_dim, num_patches}
+    mask = get_evaluation_mask(geom)
+    refined_patches, n_elements = refine_geometry(geom, qbox_size)
+    refined_geom = MaskedGeometry(MultiPatchGeometry((refined_patches...)), mask)
     active_elements = Hierarchy.ActiveInfo([collect(1:n_elements)])
     hier_geom = HierarchicalGeometry((refined_geom,), active_elements)
     return QBoxGeometry(hier_geom, qbox_size)
@@ -47,32 +83,14 @@ function get_qbox_size(qbox_geometry::QBoxGeometry)
     return qbox_geometry.qbox_size
 end
 
-############################################################################################
-#                                    Abstract Methods                                      #
-############################################################################################
+# TODO: Check if I want to use this function; if so, replace the lines of code in other functions.
+function get_patch_elements_dim(qbox_geometry::QBoxGeometry, level::Int, patch_id::Int)
+    hier_geom = get_hierarchical_geometry(qbox_geometry)
+    geom = hier_geom.geometries[level]
+    patch_geom = get_parametric_geometry(geom, patch_id)
+    return get_cart_num_elements(patch_geom)
+end
 
-"""
-    get_pbox_id(hier_id::Int, pbox_info::PBoxInfo, active_info::ActiveInfo,
-        geometry::AbstractGeometry)
-
-Returns the id of the pbox a element 'hier_id' is in. It uses these steps:
-1. hier_id →  convert_to_level_and_level_id  →  level + level_id
-2. level_id →  get_patch_and_local_element_id  →  patch_id + local_id
-3. find p and n_elements of the correct level
-4. p + n_elements + local_id → pbox_id
-
-# Arguments
-- `geometry::AbstractGeometry`: The multi-patch geometry.
-- `hier_id::Int`: The hierarchical element ID.
-- `pbox_info::PBoxInfo`: The info of the pbox (contains spline degrees and number of 
-    elements of the first level)
-- `active_info::ActiveInfo`: The active elements per level.
-
-# Returns
-- `pbox_id::Int`: The pbox ID
-- `level::Int`: The level
-- `patch_id::Int`: The patch ID
-"""
 function get_qbox_id_hier(hier_id::Int, qbox_geometry::QBoxGeometry)
     hier_geom = get_hierarchical_geometry(qbox_geometry)
     # hier_id →  convert_to_level_and_level_id (from ActiveInfo --> module Hierarchy)  →  level + level_id
@@ -103,23 +121,6 @@ function get_qbox_id_local(level::Int, local_element_id::Int, patch_id::Int, qbo
     return qbox_id
 end
 
-"""
-    get_pbox_element_ids(geometry::AbstractGeometry, pbox_id::Int, pbox_info::PBoxInfo,
-        level::Int, patch_id::Int)
-
-Returns the ids of the elements of a pbox 'pbox_id'.
-
-# Arguments
-- `geometry::AbstractGeometry`: The multi-patch geometry.
-- `pbox_id::Int`: The pbox ID
-- `pbox_info::PBoxInfo`: The info of the pbox (contains spline degrees and number of 
-    elements of the first level)
-- `level::Int`: The level
-- `patch_id::Int`: The patch ID.
-
-# Returns
-- `ids::Vector{Int}`: Returns a Vector{Int} with the level-local element IDs
-"""
 function get_qbox_element_ids(level::Int, patch_id::Int, qbox_geometry::QBoxGeometry, qbox_id::Int)
     size_qbox = get_qbox_size(qbox_geometry)
     hier_geom = get_hierarchical_geometry(qbox_geometry)
@@ -129,34 +130,20 @@ function get_qbox_element_ids(level::Int, patch_id::Int, qbox_geometry::QBoxGeom
     n_qboxes_dim = ntuple(i -> n_elements_dim[i] ÷ size_qbox[i], length(size_qbox))
     qbox_coords = Points.CartesianIndices(n_qboxes_dim)[qbox_id]
     
-    # hier nog naar kijken (is misschien efficienter:)
-    # n = prod(size_qbox)
-    # ids = Vector{Int}(undef, n)
-    ids = Int[]
+    n = prod(size_qbox)
+    ids = Vector{Int}(undef, n)
+    k=1
     element_ranges = ntuple(i -> (qbox_coords[i]-1)*size_qbox[i]+1 : qbox_coords[i]*size_qbox[i], length(size_qbox))
     for element_coords in Iterators.product(element_ranges...)
         local_element_id = Points.LinearIndices(n_elements_dim)[element_coords...]
         level_element_id = get_global_element_id(geom_level, patch_id, local_element_id)
-        push!(ids, level_element_id)
+        ids[k] = level_element_id
+        k += 1
     end
     return ids
 end
 
-"""
-	 child_pbox_ids(pbox_info::PBoxInfo, level::Int, pbox_id::Int)
-Returns the ids of the 'children' of `pbox_id`, the children of a pbox 'pbox_id' are the 
-pboxes in which 'pbox_id' has been refined to in the next level.
-
-# Arguments
-- `pbox_info::PBoxInfo`: The info of the pbox (contains spline degrees and number of 
-    elements of the first level)
-- `level::Int`: The level of the pbox.
-- `pbox_id::Int`: The pbox ID of which we want to know the children. 
-
-# Returns
-- `children::Vector{Int}`: Returns a Vector{Int} with IDs of the children
-
-"""
+#TODO: Look at check, ask supervisors if it is good enough
 function get_child_qbox_ids(level::Int, patch_id::Int, qbox_geometry::QBoxGeometry, qbox_id::Int)
     size_qbox = get_qbox_size(qbox_geometry)
     hier_geom = get_hierarchical_geometry(qbox_geometry)
@@ -200,22 +187,7 @@ end
 ############################################################################################
 
 """
-	refine_pbox!(geometry::AbstractGeometry, active_info::ActiveInfo, pbox_info::PBoxInfo, 
-        level::Int, patch_id::Int, pbox_id::Int)
-
-It finds the elements of the pbox 'pbox_id' that needs to be refined. And it finds all the 
-elements of the children of the pbox. Then using the function update! the elements of 
-the children will be set to active, and the elements of the pbox no longer.
-
-# Arguments
-- `geometry::AbstractGeometry`: The multi-patch geometry.
-- `active_info::ActiveInfo`: The active elements per level.
-- `pbox_info::PBoxInfo`: The info of the pbox (contains spline degrees and number of 
-    elements of the first level)
-- `level::Int`: The level of the pbox we want to refine.
-- `patch_id::Int`: The patch ID in which the pbox is that we want to refine.
-- `pbox_id::Int`: The pbox ID of the pbox that we want to refine.
-
+QBox refinement works per patch; QBoxes are patch-local.
 """
 function refine_qbox!(qbox_geometry::QBoxGeometry, level::Int, patch_id::Int, qbox_id::Int)
     hier_geom = get_hierarchical_geometry(qbox_geometry)
