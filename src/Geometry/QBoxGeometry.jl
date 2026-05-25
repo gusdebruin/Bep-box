@@ -26,34 +26,55 @@ struct QBoxGeometry{manifold_dim, image_dim, num_patches, HG} <:
     end
 end
 
-function refine_geometry(geom::AbstractGeometry{manifold_dim, image_dim, num_patches}, 
+# function refine_geometry(geom::AbstractGeometry{manifold_dim, image_dim, num_patches}, 
+#     qbox_size::NTuple{manifold_dim,Int}) where {manifold_dim, image_dim, num_patches}
+#     patches = get_num_patches(geom)
+#     if patches == 1
+#         patch_geom = get_parametric_geometry(geom)
+#         refined_geometry = subdivide_geometry(patch_geom, qbox_size)
+#         n_elements = get_lin_num_elements(refined_geometry)
+#     else
+#         refined_patches = Vector{AbstractGeometry}(undef, patches)
+#         i=1
+#         n_elements = 0
+#         for patch in 1:patches
+#             patch_geom = get_parametric_geometry(geom, patch)
+#             refined_geom = subdivide_geometry(patch_geom, qbox_size)
+#             n_elements +=get_lin_num_elements(refined_geom)
+#             refined_patches[i]=refined_geom
+#             i +=1
+#         end
+#         refined_geometry = MultiPatchGeometry((refined_patches...))
+#     end
+#     return refined_geometry, n_elements
+# end
+
+function refine_patch(patch_geom::CartesianGeometry{manifold_dim, image_dim}, 
+    qbox_size::NTuple{manifold_dim,Int}) where {manifold_dim, image_dim}
+    refined_patch = subdivide_geometry(patch_geom, qbox_size)
+    n_elements_patch = get_lin_num_elements(refined_patch)
+    return refined_patch, n_elements_patch
+end
+
+function QBoxGeometry(geom::CartesianGeometry{manifold_dim, image_dim, num_patches}, 
     qbox_size::NTuple{manifold_dim,Int}) where {manifold_dim, image_dim, num_patches}
     patches = get_num_patches(geom)
     if patches == 1
-        patch_geom = get_parametric_geometry(geom)
-        refined_geometry = subdivide_geometry(patch_geom, qbox_size)
-        n_elements = get_lin_num_elements(refined_geometry)
+        refined_geometry, n_elements = refine_patch(geom, qbox_size)
     else
         refined_patches = Vector{AbstractGeometry}(undef, patches)
         i=1
         n_elements = 0
         for patch in 1:patches
-            patch_geom = get_parametric_geometry(geom, patch)
-            refined_geom = subdivide_geometry(patch_geom, qbox_size)
-            n_elements +=get_lin_num_elements(refined_geom)
-            refined_patches[i]=refined_geom
+            patch_geom = get_geometry(geom, patch)
+            refined_patch, n_elements_patch = refine_patch(patch_geom, qbox_size)
+            n_elements += n_elements_patch
+            refined_patches[i]=refined_patch
             i +=1
         end
         refined_geometry = MultiPatchGeometry((refined_patches...))
     end
-    return refined_geometry, n_elements
-end
-
-function QBoxGeometry(geom::CartesianGeometry{manifold_dim, image_dim, num_patches}, 
-    qbox_size::NTuple{manifold_dim,Int}) where {manifold_dim, image_dim, num_patches}
-    refined_geom, n_elements = refine_geometry(geom, qbox_size)
-    #active_elements = Hierarchy.ActiveInfo([collect(1:n_elements)])
-    active_elements = ActiveInfo([collect(1:n_elements)])
+    active_elements = Hierarchy.ActiveInfo([collect(1:n_elements)])
     hier_geom = HierarchicalGeometry((refined_geom,), active_elements)
     return QBoxGeometry(hier_geom, qbox_size)
 end
@@ -61,8 +82,24 @@ end
 function QBoxGeometry(geom::MappedGeometry{manifold_dim, image_dim, num_patches}, 
     qbox_size::NTuple{manifold_dim,Int}) where {manifold_dim, image_dim, num_patches}
     mapping = get_mapping(geom)
-    refined_patches, n_elements = refine_geometry(geom, qbox_size)
-    refined_geom = MappedGeometry(refined_patches, mapping)
+    patches = get_num_patches(geom)
+    if patches == 1
+        patch_geom = get_parametric_geometry(geom)
+        refined_geometry, n_elements = refine_patch(patch_geom, qbox_size)
+    else
+        refined_patches = Vector{AbstractGeometry}(undef, patches)
+        i=1
+        n_elements = 0
+        for patch in 1:patches
+            patch_geom = get_parametric_geometry(geom, patch)
+            refined_patch, n_elements_patch = refine_patch(patch_geom, qbox_size)
+            n_elements += n_elements_patch
+            refined_patches[i]=refined_patch
+            i +=1
+        end
+        refined_geometry = MultiPatchGeometry((refined_patches...))
+    end
+    refined_geom = MappedGeometry(refined_geometry, mapping)
     active_elements = Hierarchy.ActiveInfo([collect(1:n_elements)])
     hier_geom = HierarchicalGeometry((refined_geom,), active_elements)
     return QBoxGeometry(hier_geom, qbox_size)
@@ -71,8 +108,24 @@ end
 function QBoxGeometry(geom::MaskedGeometry{manifold_dim, image_dim, num_patches}, 
     qbox_size::NTuple{manifold_dim,Int}) where {manifold_dim, image_dim, num_patches}
     mask = get_evaluation_mask(geom)
-    refined_patches, n_elements = refine_geometry(geom, qbox_size)
-    refined_geom = MaskedGeometry(refined_patches, mask)
+    patches = get_num_patches(geom)
+    if patches == 1
+        patch_geom = get_parametric_geometry(geom)
+        refined_geometry, n_elements = refine_patch(patch_geom, qbox_size)
+    else
+        refined_patches = Vector{AbstractGeometry}(undef, patches)
+        i=1
+        n_elements = 0
+        for patch in 1:patches
+            patch_geom = get_parametric_geometry(geom, patch)
+            refined_patch, n_elements_patch = refine_patch(patch_geom, qbox_size)
+            n_elements += n_elements_patch
+            refined_patches[i]=refined_patch
+            i +=1
+        end
+        refined_geometry = MultiPatchGeometry((refined_patches...))
+    end
+    refined_geom = MaskedGeometry(refined_geometry, mask)
     active_elements = Hierarchy.ActiveInfo([collect(1:n_elements)])
     hier_geom = HierarchicalGeometry((refined_geom,), active_elements)
     return QBoxGeometry(hier_geom, qbox_size)
