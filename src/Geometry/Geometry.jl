@@ -540,6 +540,8 @@ include("MaskedGeometry.jl")
 include("UnstructuredGeometry.jl")
 include("HierarchicalGeometry.jl")
 include("Metric.jl")
+include("QBoxGeometry.jl")
+include("TwoScaleRelationsGeometry.jl")
 
 include("./GeometryConversions.jl")
 
