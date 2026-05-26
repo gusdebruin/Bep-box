@@ -81,7 +81,7 @@ function subdivide_geometry(parent_geo::CartesianGeometry{1}, num_subdivisons::I
 end
 
 function subdivide_geometry(
-    parent_geo::CartesianGeometry{manifold_dim},
+    parent_geo::CartesianGeometry{manifold_dim, image_dim, 1},
     num_subdivisons::NTuple{manifold_dim},
 ) where {manifold_dim}
     parent_breakpoints = get_breakpoints(parent_geo)
