@@ -113,7 +113,7 @@ function get_qbox_id_local(level::Int, local_element_id::Int, patch_id::Int, qbo
     qbox_coords = ntuple(i -> (coords[i] - 1) ÷ size_qbox[i] + 1, length(size_qbox))
     n_qboxes_dim = ntuple(i -> n_elements_dim[i] ÷ size_qbox[i], length(size_qbox))
     lin_ind = Points.LinearIndices(n_qboxes_dim)
-    qbox_id = (length(n_qboxes_dim) == 1 ? lin_ind[qbox_coords[1]] : lin_ind[qbox_coords])
+    qbox_id = (length(n_qboxes_dim) == 1 ? lin_ind[qbox_coords[1]] : lin_ind[qbox_coords...])
     return qbox_id
 end
 
