@@ -6,17 +6,6 @@ using Test
 ############################################################################################
 #                                          Setup                                           #
 ############################################################################################
-
-# # 1D, 1 patch, 4 elementen
-# geom_1 = Geometry.CartesianGeometry((0.0:1.0:4.0,))
-# qbox_size_1 = (2,)
-# qbg_1 = Geometry.QBoxGeometry(geom, qbox_size)
-
-# # 2D, 1 patch, 4×4 elementen
-# geom_2 = Geometry.CartesianGeometry((0.0:1.0:4.0, 0.0:1.0:4.0))
-# qbox_size_2 = (2,2)
-# qbg_2 = Geometry.QBoxGeometry(geom, qbox_size)
-
 # create a 1D geometry with 4 elements
 # Level 1: original geometry
 geom_lvl1 = Geometry.CartesianGeometry((0.0:1.0:4.0,))
@@ -37,10 +26,15 @@ active = Hierarchy.ActiveInfo([
 hier = Geometry.HierarchicalGeometry((geom_lvl1, geom_lvl2), active)
 qbg = Geometry.QBoxGeometry(hier, qbox_size)
 
-@testset "QBoxGeometry basic tests" begin
+@testset "QBoxGeometry basic tests 1D" begin
     # element 1 → qbox 1
     qid, lvl, pid = Geometry.get_qbox_id_hier(1, qbg)
     @test qid == 1
+    @test lvl == 1
+    @test pid == 1
+
+    qid, lvl, pid = Geometry.get_qbox_id_hier(3, qbg)
+    @test qid == 2
     @test lvl == 1
     @test pid == 1
 
@@ -53,6 +47,16 @@ qbg = Geometry.QBoxGeometry(hier, qbox_size)
 
     # refine qbox 1
     Geometry.refine_qbox!(qbg, 1, 1, 1)
+
+    qid, lvl, pid = Geometry.get_qbox_id_hier(1, qbg)
+    @test qid == 2
+    @test lvl == 1
+    @test pid == 1
+
+    qid, lvl, pid = Geometry.get_qbox_id_hier(3, qbg)
+    @test qid == 1
+    @test lvl == 2
+    @test pid == 1
 end
 
 end
