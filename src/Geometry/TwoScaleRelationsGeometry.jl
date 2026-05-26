@@ -40,9 +40,18 @@ end
 
 function subdivide_geometry(parent_geo::MappedGeometry, num_subdivisons)
     parent_base_geometry = get_base_geometry(parent_geo)
-    child_base_geoemtry = subdivide_geometry(parent_base_geometry, num_subdivisons)
+    child_base_geometry = subdivide_geometry(parent_base_geometry, num_subdivisons)
     mapping = get_mapping(parent_geo)
-    child_geometry = MappedGeometry(child_base_geoemtry, mapping)
+    child_geometry = MappedGeometry(child_base_geometry, mapping)
+
+    return child_geometry
+end
+
+function subdivide_geometry(parent_geo::MaskedGeometry, num_subdivisons)
+    parent_base_geometry = get_base_geometry(parent_geo)
+    child_base_geometry = subdivide_geometry(parent_base_geometry, num_subdivisons)
+    mask = get_evaluation_mask(parent_geo)
+    child_geometry = MaskedGeometry(child_base_geometry, mask)
 
     return child_geometry
 end
@@ -83,6 +92,33 @@ function subdivide_geometry(
     child_geometry = CartesianGeometry(const_child_breakpoints)
 
     return child_geometry
+end
+
+function subdivide_geometry(
+    parent_geo::CartesianGeometry{manifold_dim, image_dim, num_patches},
+    num_subdivisions::NTuple{manifold_dim}
+) where {manifold_dim, image_dim, num_patches}
+    return subdivide_geometry(parent_geo, ntuple(patch -> num_subdivisions, num_patches))
+end
+
+function subdivide_geometry(
+    parent_geo::CartesianGeometry{manifold_dim, image_dim, num_patches},
+    num_subdivisions::NTuple{num_patches, NTuple{manifold_dim}}
+) where {manifold_dim, image_dim, num_patches}
+
+    parent_breaks = get_breakpoints(parent_geo)
+    child_breaks = ntuple(patch -> begin
+        patch_breaks = parent_breaks[patch]
+        patch_subdivs = num_subdivisions[patch]
+
+        ntuple(dim -> subdivide_breakpoints(
+            patch_breaks[dim],
+            patch_subdivs[dim]
+        ), manifold_dim)
+
+    end, num_patches)
+
+    return CartesianGeometry(child_breaks)
 end
 
 """
