@@ -45,7 +45,23 @@ hier_2D = Geometry.HierarchicalGeometry(
 )
 qbg_2D = Geometry.QBoxGeometry(hier_2D, qbox_size_2D)
 
+# 2D multi patch geometry
+geom_lvl1_2D_mp = Geometry.CartesianGeometry(((LinRange(0.5, 2.5, 5), LinRange(-0.75, 0.75, 3)),(LinRange(2.5, 5.5, 7), LinRange(-0.75, 0.75, 5))))
 
+n1_2D_mp = Geometry.get_num_elements(geom_lvl1_2D_mp) 
+qbox_size_2D_mp = (2,2)
+
+geom_lvl2_2D_mp, n2_2D_mp = Geometry.refine_geometry(geom_lvl1_2D_mp, qbox_size_2D_mp)
+#geom_lvl3_2D_mp, n3_2D_mp = Geometry.refine_geometry(geom_lvl2_2D_mp, qbox_size_2D_mp)
+
+# ActiveInfo: all elements of level 1 are active
+active_2D_mp = Hierarchy.ActiveInfo([collect(1:n1_2D_mp), Int[]])
+
+hier_2D_mp = Geometry.HierarchicalGeometry(
+    (geom_lvl1_2D_mp, geom_lvl2_2D_mp),
+    active_2D_mp
+)
+qbg_2D_mp = Geometry.QBoxGeometry(hier_2D_mp, qbox_size_2D_mp)
 ############################################################################################
 #                                       Basic Tests                                        #
 ############################################################################################
@@ -128,4 +144,68 @@ end
     @test lvl == 2
 end
 
+@testset "QBoxGeometry basic tests 2D Multi-patch" begin
+    # element 1 → qbox 1
+    qid, lvl, pid = Geometry.get_qbox_id_hier(1, qbg_2D_mp)
+    @test lvl == 1
+    @test qid == 1
+    @test pid == 1
+    
+
+    # element 7 (row 2, col 3) → qbox 2
+    qid, lvl, pid = Geometry.get_qbox_id_hier(7, qbg_2D_mp)
+    @test lvl == 1
+    @test qid == 2
+    @test pid == 1
+
+    # element 28  → qbox 4
+    qid, lvl, pid = Geometry.get_qbox_id_hier(28, qbg_2D_mp)
+    @test lvl == 1
+    @test qid == 4
+    @test pid == 2
+
+    # qbox 4 of patch 2 contains 4 elements on level 1 (not that this returns level ids)
+    @test Geometry.get_qbox_element_ids(1, 2, qbg_2D_mp, 4) == [21,22,27,28]
+
+    # children of qbox 2 of patch 2 on level 1
+    children_lvl2 = Geometry.get_child_qbox_ids(1, 2, qbg_2D_mp, 2)
+    @test length(children_lvl2) == 4
+    @test children_lvl2 == [3,4,9,10]
+
+
+    Geometry.refine_qbox!(qbg_2D_mp, 1, 1, 1)
+    Geometry.refine_qbox!(qbg_2D_mp, 1, 2, 2)
+    # Now active elements:
+    # level 1: elements not in qbox 1 of patch 1 and qbox 2 of patch 2
+    # level 2: children of qbox 1 of patch 1 and qbox 2 of patch 2
+
+    # hier_id = 1 is now the first active element on level 1
+    qid, lvl, pid = Geometry.get_qbox_id_hier(1, qbg_2D_mp)
+    @test lvl == 1
+    @test qid == 2
+    @test pid == 1
+
+    qid, lvl, pid = Geometry.get_qbox_id_hier(6, qbg_2D_mp)
+    @test lvl == 1
+    @test qid == 1
+    @test pid == 2
+
+    qid, lvl, pid = Geometry.get_qbox_id_hier(17, qbg_2D_mp)
+    @test lvl == 1
+    @test qid == 6
+    @test pid == 2
+
+    qid, lvl, pid = Geometry.get_qbox_id_hier(34, qbg_2D_mp)
+    @test lvl == 2
+    @test qid == 5
+    @test pid == 1
+
+    qid, lvl, pid = Geometry.get_qbox_id_hier(55, qbg_2D_mp)
+    @test lvl == 2
+    @test qid == 10
+    @test pid == 2
+
+    qid = Geometry.get_qbox_id_local(1,6,2,qbg_2D_mp)
+    @test qid == 3
+end
 end
