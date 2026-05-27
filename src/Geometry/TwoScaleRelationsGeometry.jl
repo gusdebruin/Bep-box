@@ -106,9 +106,8 @@ function subdivide_geometry(
     num_subdivisions::NTuple{num_patches, NTuple{manifold_dim}}
 ) where {manifold_dim, image_dim, num_patches}
 
-    parent_breaks = get_breakpoints(parent_geo)
     child_breaks = ntuple(patch -> begin
-        patch_breaks = parent_breaks[patch]
+        patch_breaks = get_breakpoints(parent_geo, patch)
         patch_subdivs = num_subdivisions[patch]
 
         ntuple(dim -> subdivide_breakpoints(
