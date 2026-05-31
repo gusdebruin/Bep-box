@@ -38,6 +38,23 @@ function subdivide_geometry(
     return child_geo
 end
 
+function subdivide_geometry(hier_geo::HierarchicalGeometry, num_subdivisons)
+    parent_geo = get_level_geometry(hier_geo, get_num_levels(hier_geo))
+    child_geo = subdivide_geometry(parent_geo, num_subdivisons)
+    new_geometries = (get_geometries(hier_geo)..., child_geo)
+    new_active = (get_active_elements(hier_geo)..., Int[])
+    new_hier_geo = HierarchicalGeometry(new_geometries, Hierarchy.ActiveInfo(new_active))
+    
+    return new_hier_geo
+end
+
+function subdivide_geometry!(qbox_geo::QBoxGeometry, num_subdivisons)
+    hier_geo = get_hierarchical_geometry(qbox_geo)
+    new_hier_geo = subdivide_geometry(hier_geo, num_subdivisons)
+    qbox_geo.hier_geom = new_hier_geo
+    #get_hierarchical_geometry(qbox_geo) = new_hier_geo
+end
+
 function subdivide_geometry(parent_geo::MappedGeometry, num_subdivisons)
     parent_base_geometry = get_base_geometry(parent_geo)
     child_base_geometry = subdivide_geometry(parent_base_geometry, num_subdivisons)
