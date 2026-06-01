@@ -38,35 +38,35 @@ function subdivide_geometry(
     return child_geo
 end
 
-function subdivide_geometry(hier_geo::HierarchicalGeometry, num_subdivisons)
+function subdivide_geometry(hier_geo::HierarchicalGeometry, num_subdivisions)
     parent_geo = get_level_geometry(hier_geo, get_num_levels(hier_geo))
-    child_geo = subdivide_geometry(parent_geo, num_subdivisons)
+    child_geo = subdivide_geometry(parent_geo, num_subdivisions)
     new_geometries = (get_geometries(hier_geo)..., child_geo)
-    new_active = (get_active_elements(hier_geo)..., Int[])
+    new_active = vcat(Hierarchy.get_level_ids(get_active_elements(hier_geo)), [Int[]])
     new_hier_geo = HierarchicalGeometry(new_geometries, Hierarchy.ActiveInfo(new_active))
     
     return new_hier_geo
 end
 
-function subdivide_geometry!(qbox_geo::QBoxGeometry, num_subdivisons)
-    hier_geo = get_hierarchical_geometry(qbox_geo)
-    new_hier_geo = subdivide_geometry(hier_geo, num_subdivisons)
-    qbox_geo.hier_geom = new_hier_geo
-    #get_hierarchical_geometry(qbox_geo) = new_hier_geo
-end
+# function subdivide_geometry!(qbox_geo::QBoxGeometry, num_subdivisions)
+#     hier_geo = get_hierarchical_geometry(qbox_geo)
+#     new_hier_geo = subdivide_geometry(hier_geo, num_subdivisions)
+#     qbox_geo.hier_geom = new_hier_geo
+#     #get_hierarchical_geometry(qbox_geo) = new_hier_geo
+# end
 
-function subdivide_geometry(parent_geo::MappedGeometry, num_subdivisons)
+function subdivide_geometry(parent_geo::MappedGeometry, num_subdivisions)
     parent_base_geometry = get_base_geometry(parent_geo)
-    child_base_geometry = subdivide_geometry(parent_base_geometry, num_subdivisons)
+    child_base_geometry = subdivide_geometry(parent_base_geometry, num_subdivisions)
     mapping = get_mapping(parent_geo)
     child_geometry = MappedGeometry(child_base_geometry, mapping)
 
     return child_geometry
 end
 
-function subdivide_geometry(parent_geo::MaskedGeometry, num_subdivisons)
+function subdivide_geometry(parent_geo::MaskedGeometry, num_subdivisions)
     parent_base_geometry = get_base_geometry(parent_geo)
-    child_base_geometry = subdivide_geometry(parent_base_geometry, num_subdivisons)
+    child_base_geometry = subdivide_geometry(parent_base_geometry, num_subdivisions)
     mask = get_evaluation_mask(parent_geo)
     child_geometry = MaskedGeometry(child_base_geometry, mask)
 
@@ -77,12 +77,12 @@ function subdivide_geometry(
     parent_geo::TensorProductGeometry{
         manifold_dim, image_dim, num_patches, num_geometries
     },
-    num_subdivisons::NTuple{manifold_dim},
+    num_subdivisions::NTuple{manifold_dim},
 ) where {manifold_dim, image_dim, num_patches, num_geometries}
     const_parent_geo = get_constituent_geometries(parent_geo)
     const_manifold_indices = get_constituent_manifold_indices(parent_geo)
     const_num_subdivions = ntuple(
-        geo -> num_subdivisons[const_manifold_indices[geo]], num_geometries
+        geo -> num_subdivisions[const_manifold_indices[geo]], num_geometries
     )
     const_child_geo = ntuple(
         geo -> subdivide_geometry(const_parent_geo[geo], const_num_subdivions[geo]),
@@ -93,17 +93,17 @@ function subdivide_geometry(
     return child_geometry
 end
 
-function subdivide_geometry(parent_geo::CartesianGeometry{1}, num_subdivisons::Int)
-    return subdivide_geometry(parent_geo, (num_subdivisons,))
+function subdivide_geometry(parent_geo::CartesianGeometry{1}, num_subdivisions::Int)
+    return subdivide_geometry(parent_geo, (num_subdivisions,))
 end
 
 function subdivide_geometry(
     parent_geo::CartesianGeometry{manifold_dim, image_dim, 1},
-    num_subdivisons::NTuple{manifold_dim},
+    num_subdivisions::NTuple{manifold_dim},
 ) where {manifold_dim, image_dim}
     parent_breakpoints = get_breakpoints(parent_geo)
     const_child_breakpoints = ntuple(
-        dim -> subdivide_breakpoints(parent_breakpoints[dim], num_subdivisons[dim]),
+        dim -> subdivide_breakpoints(parent_breakpoints[dim], num_subdivisions[dim]),
         manifold_dim,
     )
     child_geometry = CartesianGeometry(const_child_breakpoints)
