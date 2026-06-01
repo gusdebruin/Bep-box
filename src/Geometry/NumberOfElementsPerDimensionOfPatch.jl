@@ -38,12 +38,7 @@ function get_n_elements_patch_dim(geom::HierarchicalGeometry, level::Int, patch_
     return get_n_elements_patch_dim(level_geom, patch_id)
 end 
 
-function get_n_elements_patch_dim(geom::QBoxGeometry, level::Int, patch_id::Int)
-    hier_geom = get_hierarchical_geometry(geom)
-    return get_n_elements_patch_dim(hier_geom, level, patch_id)
-end 
-
-function get_n_elements_patch_dim(geom::MaskedGeometry, patch_id::Int)
-    base_geom = get_base_geometry(geom)
-    return get_n_elements_patch_dim(base_geom, patch_id)
-end
+# function get_n_elements_patch_dim(geom::QBoxGeometry, level::Int, patch_id::Int)
+#     hier_geom = get_hierarchical_geometry(geom)
+#     return get_n_elements_patch_dim(hier_geom, level, patch_id)
+# end 
