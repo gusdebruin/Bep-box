@@ -181,6 +181,29 @@ function _plot(
 end
 
 function _plot(
+    geometry::Geometry.QBoxGeometry{manifold_dim};
+    vtk_filename::String="default",
+    n_subcells::Int=1,
+    degree::Int=1,
+    ascii=false,
+    compress=true,
+    subcell_wireframe=true,
+) where {manifold_dim}
+
+    hier_geom = Geometry.get_hierarchical_geometry(geometry)
+    return _plot(
+        hier_geom;
+        vtk_filename=vtk_filename,
+        n_subcells=n_subcells,
+        degree=degree,
+        ascii=ascii,
+        compress=compress,
+        subcell_wireframe=subcell_wireframe,
+    )
+
+end
+
+function _plot(
     form::Forms.AbstractForm{manifold_dim, form_rank, 0},
     offset::Union{Nothing, Function}=nothing;
     vtk_filename::String="default",
