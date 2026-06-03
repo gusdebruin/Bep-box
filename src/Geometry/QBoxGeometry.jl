@@ -9,38 +9,6 @@ mutable struct QBoxGeometry{manifold_dim, image_dim, num_patches} <:
 
 end
 
-function QBoxGeometry_refine(
-    ::HierarchicalGeometry,
-    qbox_size,
-    num_subdivisions
-)
-    throw(ArgumentError("Cannot construct QBoxGeometry from HierarchicalGeometry"))
-end
-
-function QBoxGeometry_refine(
-    ::QBoxGeometry,
-    qbox_size,
-    num_subdivisions
-)
-    throw(ArgumentError("Cannot construct QBoxGeometry from QBoxGeometry"))
-end
-
-function QBoxGeometry_from_existing(
-    ::HierarchicalGeometry,
-    qbox_size,
-    num_subdivisions
-)
-    throw(ArgumentError("Cannot construct QBoxGeometry from HierarchicalGeometry"))
-end
-
-function QBoxGeometry_from_existing(
-    ::QBoxGeometry,
-    qbox_size,
-    num_subdivisions
-)
-    throw(ArgumentError("Cannot construct QBoxGeometry from QBoxGeometry"))
-end
-
 function QBoxGeometry_refine(geom::AbstractGeometry{manifold_dim, image_dim, num_patches}, 
     qbox_size::NTuple{manifold_dim,Int}, num_subdivisions::NTuple{manifold_dim,Int}) where {manifold_dim, image_dim, num_patches}
     refined_geom = subdivide_geometry(geom, qbox_size)
@@ -62,6 +30,38 @@ function QBoxGeometry_from_existing(geom::AbstractGeometry{manifold_dim, image_d
     active_elements = Hierarchy.ActiveInfo([collect(1:n_elements)])
     hier_geom = HierarchicalGeometry((geom,), active_elements)
     return QBoxGeometry(hier_geom, qbox_size, num_subdivisions)
+end
+
+function QBoxGeometry_refine(
+    geom::HierarchicalGeometry{manifold_dim, image_dim, num_patches},
+    qbox_size::NTuple{manifold_dim,Int}, 
+    num_subdivisions::NTuple{manifold_dim,Int}
+)where {manifold_dim, image_dim, num_patches}
+    throw(ArgumentError("Cannot construct QBoxGeometry from HierarchicalGeometry"))
+end
+
+function QBoxGeometry_refine(
+    geom::QBoxGeometry{manifold_dim, image_dim, num_patches},
+    qbox_size::NTuple{manifold_dim,Int}, 
+    num_subdivisions::NTuple{manifold_dim,Int}
+)where {manifold_dim, image_dim, num_patches}
+    throw(ArgumentError("Cannot construct QBoxGeometry from QBoxGeometry"))
+end
+
+function QBoxGeometry_from_existing(
+    geom::HierarchicalGeometry{manifold_dim, image_dim, num_patches},
+    qbox_size::NTuple{manifold_dim,Int}, 
+    num_subdivisions::NTuple{manifold_dim,Int}
+)where {manifold_dim, image_dim, num_patches}
+    throw(ArgumentError("Cannot construct QBoxGeometry from HierarchicalGeometry"))
+end
+
+function QBoxGeometry_from_existing(
+    geom::QBoxGeometry{manifold_dim, image_dim, num_patches},
+    qbox_size::NTuple{manifold_dim,Int}, 
+    num_subdivisions::NTuple{manifold_dim,Int}
+)where {manifold_dim, image_dim, num_patches}
+    throw(ArgumentError("Cannot construct QBoxGeometry from QBoxGeometry"))
 end
 
 ############################################################################################
