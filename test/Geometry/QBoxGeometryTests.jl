@@ -219,4 +219,10 @@ end
     qid = Geometry.get_qbox_id_local(1,6,2,qbg_2D_mp)
     @test qid == 3
 end
+#hier_g_2D = Geometry.get_hierarchical_geometry(qbg_2D)
+#Plot.plot(hier_g_2D; vtk_filename="2D 4x4 square after QBox")
+
+#hier_g_2D_mp = Geometry.get_hierarchical_geometry(qbg_2D_mp)
+Plot.plot(qbg_2D_mp; vtk_filename="test 2D multi-patch after QBox")
+
 end
