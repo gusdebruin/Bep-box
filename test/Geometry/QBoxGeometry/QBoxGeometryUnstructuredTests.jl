@@ -103,4 +103,47 @@ qbp_2 = Geometry.QBoxGeometry_from_existing(geometry_2, qbox_size_2, num_sub_2)
 
 end
 
+@testset "QBoxGeometry Unstructured geom, one element" begin
+     # element 1 → qbox 1
+    qid, lvl, pid = Geometry.get_qbox_id_hier(1, qbp_1)
+    @test lvl == 1
+    @test qid == 1
+    @test pid == 1
+    
+    qid, lvl, pid = Geometry.get_qbox_id_hier(4, qbp_1)
+    @test lvl == 1
+    @test qid == 1
+    @test pid == 1
+
+
+    # qbox 4 of patch 2 contains 4 elements on level 1 (not that this returns level ids)
+    @test Geometry.get_qbox_element_ids(1, 1, qbp_1, 1) == [1,2,3,4]
+
+    # level 2:
+    Geometry.refine_qbox!(qbp_1, 1, 1, 1)
+
+    # level 3: 
+    Geometry.refine_qbox!(qbp_1, 2, 1, 1)
+    
+    children_lvl2 = Geometry.get_child_qbox_ids(1, 1, qbp_1, 1)
+    @test children_lvl2 == [1,2]
+
+    children_lvl2 = Geometry.get_child_qbox_ids(2, 1, qbp_1, 1)
+    @test children_lvl2 == [1,2]
+
+    # hier_id = 1 is now the first active element on level 1
+    qid, lvl, pid = Geometry.get_qbox_id_hier(1, qbp_1)
+    @test lvl == 2
+    @test qid == 2
+    @test pid == 1
+
+    qid, lvl, pid = Geometry.get_qbox_id_hier(9, qbp_1)
+    @test lvl == 3
+    @test qid == 2
+    @test pid == 1
+
+    @test Geometry.get_qbox_element_ids(3, 1, qbp_1, 1) == [1,2,3,4]
+
+end
+
 end
