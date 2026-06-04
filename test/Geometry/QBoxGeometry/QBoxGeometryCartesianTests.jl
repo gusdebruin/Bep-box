@@ -1,4 +1,4 @@
-module QBoxGeometryTests
+module QBoxGeometryCartesianTests
 
 using Mantis
 using Test
@@ -55,7 +55,9 @@ qbox_size_3D = (1,1,1)
 num_subdivisions_3D = (2,2,2)
 qbg_3D_mp = Geometry.QBoxGeometry_from_existing(geom_3D_mp, qbox_size_3D, num_subdivisions_3D)
 #Plot.plot(geom_3D_mp; vtk_filename="Basic 3D multi-patch_e before QBox")
-# testing of beginning with a QBoxGeometry or HierarchicalGeometry gives an error (they all gave the correct error)
+
+## testing of beginning with a QBoxGeometry or HierarchicalGeometry gives an error 
+## -->(they all gave the correct error)
 # geom_lvl1_hier = Geometry.CartesianGeometry((
 #     0.0:2.0:4.0,
 #     0.0:2.0:4.0
@@ -68,10 +70,7 @@ qbg_3D_mp = Geometry.QBoxGeometry_from_existing(geom_3D_mp, qbox_size_3D, num_su
 #     0.0:1.0:4.0,
 #     0.0:1.0:4.0
 # ))
-
-# # ActiveInfo: all elements of level 1 are active
 # active_2D_hier = Hierarchy.ActiveInfo([collect(1:n1_2D_hier), Int[]])
-
 # hier_g_test = Geometry.HierarchicalGeometry(
 #     (geom_lvl1_hier, geom_lvl2_hier),
 #     active_2D_hier
@@ -84,7 +83,7 @@ qbg_3D_mp = Geometry.QBoxGeometry_from_existing(geom_3D_mp, qbox_size_3D, num_su
 # #test_qbg_e = Geometry.QBoxGeometry_from_existing(qbg_2D_test, qbox_size_2D_hier, num_subdivisions_2D_hier)
 
 ############################################################################################
-#                                       Basic Tests                                        #
+#                                             Tests                                        #
 ############################################################################################
 
 @testset "QBoxGeometry basic tests 1D refine" begin
@@ -324,7 +323,6 @@ end
     @show Hierarchy.get_level_ids(active)
 
     children = Geometry.get_child_qbox_ids(1, 2, qbg_3D_mp, 3)
-    @test length(children) == 8
     @test children == [5,6,11,12,17,18,23,24]
 
     for (i, child) in enumerate(children)
