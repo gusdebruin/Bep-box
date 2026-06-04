@@ -48,20 +48,26 @@ function subdivide_geometry(hier_geo::HierarchicalGeometry, num_subdivisions)
     return new_hier_geo
 end
 
-# function subdivide_geometry!(qbox_geo::QBoxGeometry, num_subdivisions)
-#     hier_geo = get_hierarchical_geometry(qbox_geo)
-#     new_hier_geo = subdivide_geometry(hier_geo, num_subdivisions)
-#     qbox_geo.hier_geom = new_hier_geo
-#     #get_hierarchical_geometry(qbox_geo) = new_hier_geo
-# end
+function subdivide_geometry(
+    parent_geo::MappedGeometry{manifold_dim, image_dim, num_patches},
+    num_subdivisions
+) where {manifold_dim, image_dim, num_patches}
 
-function subdivide_geometry(parent_geo::MappedGeometry, num_subdivisions)
-    parent_base_geometry = get_base_geometry(parent_geo)
-    child_base_geometry = subdivide_geometry(parent_base_geometry, num_subdivisions)
     mapping = get_mapping(parent_geo)
-    child_geometry = MappedGeometry(child_base_geometry, mapping)
 
-    return child_geometry
+    if num_patches == 1
+        parent_base_geometry = get_base_geometry(parent_geo)  # single base geometry
+        child_base_geometry = subdivide_geometry(parent_base_geometry, num_subdivisions)
+        return MappedGeometry(child_base_geometry, mapping)
+    else
+        # multi-patch: bouw een NTuple van gerefinede patches
+        child_base_geometry = ntuple(i -> begin
+            patch_base = get_base_geometry(parent_geo, i)
+            subdivide_geometry(patch_base, num_subdivisions)
+        end, num_patches)
+
+        return MappedGeometry(child_base_geometry, mapping)
+    end
 end
 
 function subdivide_geometry(parent_geo::MaskedGeometry, num_subdivisions)
