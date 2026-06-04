@@ -1,4 +1,4 @@
-module QBoxGeometryOtherGeometriesTests
+module QBoxGeometryMappedTests
 using Mantis
 using Test
 
