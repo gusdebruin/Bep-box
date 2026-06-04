@@ -47,7 +47,7 @@ function get_n_elements_patch_dim(
         constituent_geoms,
         Tuple(patch_tuple)
     )
-    return Tuple(vcat(dims_per_const...))
+    return Tuple(Iterators.flatten(dims_per_const))
 end 
 
 function get_n_elements_patch_dim(geom::HierarchicalGeometry, level::Int, patch_id::Int)
