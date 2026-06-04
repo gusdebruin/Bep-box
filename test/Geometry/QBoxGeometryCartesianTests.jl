@@ -38,34 +38,50 @@ num_subdivisions_2D_mp_e = (2,3)
 qbg_2D_mp_e = Geometry.QBoxGeometry_from_existing(geom_lvl1_2D_mp_e, qbox_size_2D_mp_e, num_subdivisions_2D_mp_e)
 #Plot.plot(qbg_2D_mp_e; vtk_filename="test 2D multi-patch_e before QBox")
 
-# testing of beginning with a QBoxGeometry or HierarchicalGeometry gives an error
-
-geom_lvl1_hier = Geometry.CartesianGeometry((
-    0.0:2.0:4.0,
-    0.0:2.0:4.0
+# 3D geometry
+geom_3D_mp = Geometry.CartesianGeometry((
+    (
+        LinRange(0, 2, 3),   # x: 2 elements
+        LinRange(0, 2, 3),   # y: 2 elements
+        LinRange(0, 2, 3)    # z: 2 elements
+    ),
+    (
+        LinRange(2, 5, 4),   # x: 3 elements
+        LinRange(0, 2, 2),   # y: 1 element
+        LinRange(0, 2, 3)    # z: 2 elements
+    )
 ))
-n1_2D_hier = Geometry.get_num_elements(geom_lvl1_hier)   # = 16
-qbox_size_2D_hier = (2,2)
-num_subdivisions_2D_hier = (2,2)
+qbox_size_3D = (1,1,1)
+num_subdivisions_3D = (2,2,2)
+qbg_3D_mp = Geometry.QBoxGeometry_from_existing(geom_3D_mp, qbox_size_3D, num_subdivisions_3D)
+#Plot.plot(geom_3D_mp; vtk_filename="Basic 3D multi-patch_e before QBox")
+# testing of beginning with a QBoxGeometry or HierarchicalGeometry gives an error (they all gave the correct error)
+# geom_lvl1_hier = Geometry.CartesianGeometry((
+#     0.0:2.0:4.0,
+#     0.0:2.0:4.0
+# ))
+# n1_2D_hier = Geometry.get_num_elements(geom_lvl1_hier)   # = 16
+# qbox_size_2D_hier = (2,2)
+# num_subdivisions_2D_hier = (2,2)
 
-geom_lvl2_hier = Geometry.CartesianGeometry((
-    0.0:1.0:4.0,
-    0.0:1.0:4.0
-))
+# geom_lvl2_hier = Geometry.CartesianGeometry((
+#     0.0:1.0:4.0,
+#     0.0:1.0:4.0
+# ))
 
-# ActiveInfo: all elements of level 1 are active
-active_2D_hier = Hierarchy.ActiveInfo([collect(1:n1_2D_hier), Int[]])
+# # ActiveInfo: all elements of level 1 are active
+# active_2D_hier = Hierarchy.ActiveInfo([collect(1:n1_2D_hier), Int[]])
 
-hier_g_test = Geometry.HierarchicalGeometry(
-    (geom_lvl1_hier, geom_lvl2_hier),
-    active_2D_hier
-)
-qbg_2D_test = Geometry.QBoxGeometry(hier_g_test, qbox_size_2D_hier, num_subdivisions_2D_hier)
+# hier_g_test = Geometry.HierarchicalGeometry(
+#     (geom_lvl1_hier, geom_lvl2_hier),
+#     active_2D_hier
+# )
+# qbg_2D_test = Geometry.QBoxGeometry(hier_g_test, qbox_size_2D_hier, num_subdivisions_2D_hier)
 
-#test_hier_r = Geometry.QBoxGeometry_refine(hier_g_test, qbox_size_2D_hier, num_subdivisions_2D_hier)
-#test_qbg_r = Geometry.QBoxGeometry_refine(qbg_2D_test, qbox_size_2D_hier, num_subdivisions_2D_hier)
-#test_hier_e = Geometry.QBoxGeometry_from_existing(hier_g_test, qbox_size_2D_hier, num_subdivisions_2D_hier)
-#test_qbg_e = Geometry.QBoxGeometry_from_existing(qbg_2D_test, qbox_size_2D_hier, num_subdivisions_2D_hier)
+# #test_hier_r = Geometry.QBoxGeometry_refine(hier_g_test, qbox_size_2D_hier, num_subdivisions_2D_hier)
+# #test_qbg_r = Geometry.QBoxGeometry_refine(qbg_2D_test, qbox_size_2D_hier, num_subdivisions_2D_hier)
+# #test_hier_e = Geometry.QBoxGeometry_from_existing(hier_g_test, qbox_size_2D_hier, num_subdivisions_2D_hier)
+# #test_qbg_e = Geometry.QBoxGeometry_from_existing(qbg_2D_test, qbox_size_2D_hier, num_subdivisions_2D_hier)
 
 ############################################################################################
 #                                       Basic Tests                                        #
@@ -285,4 +301,51 @@ end
     @test pid == 2
 end
 
+@testset "QBoxGeometry basic tests 3D Multi-patch from existing" begin
+    @test Geometry.get_n_elements_patch_dim(geom_3D_mp, 1) == (2,2,2)
+    @test Geometry.get_n_elements_patch_dim(geom_3D_mp, 2) == (3,1,2)
+    
+    qid, lvl, pid = Geometry.get_qbox_id_hier(1, qbg_3D_mp)
+    @test (qid, lvl, pid) == (1, 1, 1)
+
+    qid, lvl, pid = Geometry.get_qbox_id_hier(8, qbg_3D_mp)
+    @test (qid, lvl, pid) == (8, 1, 1)
+
+    qid, lvl, pid = Geometry.get_qbox_id_hier(9, qbg_3D_mp)
+    @test (qid, lvl, pid) == (1, 1, 2)
+
+    qid, lvl, pid = Geometry.get_qbox_id_hier(14, qbg_3D_mp)
+    @test (qid, lvl, pid) == (6, 1, 2)
+
+    Geometry.refine_qbox!(qbg_3D_mp, 1, 1, 1)
+    Geometry.refine_qbox!(qbg_3D_mp, 1, 2, 3)
+
+    active = Geometry.get_active_elements(Geometry.get_hierarchical_geometry(qbg_3D_mp))
+    @show Hierarchy.get_level_ids(active)
+
+    children = Geometry.get_child_qbox_ids(1, 2, qbg_3D_mp, 3)
+    @test length(children) == 8
+    @test children == [5,6,11,12,17,18,23,24]
+
+    for (i, child) in enumerate(children)
+        elems = Geometry.get_qbox_element_ids(2, 2, qbg_3D_mp, child)
+        @test length(elems) == 1   #  qbox_size = (1,1,1)
+    end
+
+    qid, lvl, pid = Geometry.get_qbox_id_hier(21, qbg_3D_mp)
+    @test lvl == 2
+    @test pid == 2
+    @test qid == 5
+
+    qid, lvl, pid = Geometry.get_qbox_id_hier(24, qbg_3D_mp)
+    @test lvl == 2
+    @test pid == 2
+    @test qid == 12
+
+    qid, lvl, pid = Geometry.get_qbox_id_hier(14, qbg_3D_mp)
+    @test lvl == 2
+    @test pid == 1
+    @test qid == 2
+end
+#Plot.plot(qbg_3D_mp; vtk_filename="Basic 3D multi-patch_e after QBox")
 end
