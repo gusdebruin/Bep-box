@@ -17,8 +17,8 @@ function get_n_elements_patch_dim(geom::CartesianGeometry, patch_id::Int)
 end
 
 function get_n_elements_patch_dim(geom::MappedGeometry, patch_id::Int)
-    base_geom = get_base_geometry(geom)
-    return get_n_elements_patch_dim(base_geom, patch_id)
+    base_geom = get_base_geometry(geom, patch_id)
+    return get_n_elements_patch_dim(base_geom, 1)
 end
 
 function get_n_elements_patch_dim(geom::MaskedGeometry, patch_id::Int)
