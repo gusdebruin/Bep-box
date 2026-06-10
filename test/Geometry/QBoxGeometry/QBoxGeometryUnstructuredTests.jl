@@ -76,12 +76,12 @@ qbp_2 = Geometry.QBoxGeometry_from_existing(geometry_2, qbox_size_2, num_sub_2)
 
     qid, lvl, pid = Geometry.get_qbox_id_hier(31, qbp_2)
     @test lvl == 2
-    @test qid == 11
+    @test qid == 12
     @test pid == 2
 
     qid, lvl, pid = Geometry.get_qbox_id_hier(24, qbp_2)
     @test lvl == 2
-    @test qid == 4
+    @test qid == 3
     @test pid == 1
 
     qid, lvl, pid = Geometry.get_qbox_id_hier(22, qbp_2)

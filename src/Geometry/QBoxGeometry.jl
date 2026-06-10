@@ -181,10 +181,9 @@ function refine_qbox!(qbox_geometry::QBoxGeometry, level::Int, patch_id::Int, qb
     remove = get_qbox_element_ids(level, patch_id, qbox_geometry, qbox_id)
     
     children = get_child_qbox_ids(level, patch_id, qbox_geometry, qbox_id)
-    all_child_element_ids = Int[]  
+    add = Int[]  
     for child in children
-        append!(all_child_element_ids, get_qbox_element_ids(level+1, patch_id, qbox_geometry, child))
+        append!(add, get_qbox_element_ids(level+1, patch_id, qbox_geometry, child))
     end
-    add = sort(all_child_element_ids)
     Hierarchy.update!(active, level, remove, add)
 end

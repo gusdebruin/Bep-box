@@ -187,7 +187,7 @@ qbg_slanted_1patch = Geometry.QBoxGeometry_from_existing(geom_slanted_1patch, qb
 
     qid, lvl, pid = Geometry.get_qbox_id_hier(254, qbg_slanted_2patch_onemap)
     @test lvl == 2
-    @test qid == 58
+    @test qid == 57
     @test pid == 4
 
     @test Geometry.get_qbox_element_ids(2, 4, qbg_slanted_2patch_onemap, 60) == [484, 494, 504]

@@ -161,7 +161,7 @@ end
 
     qid, lvl, pid = Geometry.get_qbox_id_hier(83, qbg_tpg)
     @test lvl == 2
-    @test qid == 8
+    @test qid == 7
     @test pid == 1
 
 
@@ -192,7 +192,7 @@ end
     Geometry.refine_qbox!(qbp_tpg2, 1, 1, 1)
 
 
-    Plot.plot(qbp_tpg2; vtk_filename="After QBOX refinement qbp_tpg2")
+    #Plot.plot(qbp_tpg2; vtk_filename="After QBOX refinement qbp_tpg2")
     
     children_lvl2 = Geometry.get_child_qbox_ids(1, 1, qbp_tpg2, 1)
     @test children_lvl2 == [1,2,7,8,25,26,31,32]

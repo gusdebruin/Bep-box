@@ -294,7 +294,7 @@ end
         println(child, " → ", Geometry.get_qbox_element_ids(2, 2, qbg_2D_mp_e, child))
     end
 
-    qid, lvl, pid = Geometry.get_qbox_id_hier(70, qbg_2D_mp_e)
+    qid, lvl, pid = Geometry.get_qbox_id_hier(73, qbg_2D_mp_e)
     @test lvl == 2
     @test qid == 4
     @test pid == 2
