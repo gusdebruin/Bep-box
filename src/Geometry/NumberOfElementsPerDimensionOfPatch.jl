@@ -50,12 +50,12 @@ function get_n_elements_patch_dim(
     return Tuple(Iterators.flatten(dims_per_const))
 end 
 
-function get_n_elements_patch_dim(geom::HierarchicalGeometry, level::Int, patch_id::Int)
+function get_n_elements_patch_dim(geom::HierarchicalGeometry, patch_id::Int, level::Int)
     level_geom = get_level_geometry(geom, level)
     return get_n_elements_patch_dim(level_geom, patch_id)
 end 
 
-# function get_n_elements_patch_dim(geom::QBoxGeometry, level::Int, patch_id::Int)
+# function get_n_elements_patch_dim(geom::QBoxGeometry, patch_id::Int, level::Int)
 #     hier_geom = get_hierarchical_geometry(geom)
 #     return get_n_elements_patch_dim(hier_geom, level, patch_id)
 # end 
