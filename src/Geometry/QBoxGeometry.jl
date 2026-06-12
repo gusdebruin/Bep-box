@@ -187,3 +187,44 @@ function refine_qbox!(qbox_geometry::QBoxGeometry, level::Int, patch_id::Int, qb
     end
     Hierarchy.update!(active, level, remove, add)
 end
+
+function refine_qboxgeom_avg!(qbox_geometry::QBoxGeometry, errors::AbstractVector{<:Real}, dorfler::Real)
+    qbox_errors = Dict{Tuple{Int,Int,Int}, Vector{Float64}}()
+
+    for hier_id in eachindex(errors)
+        qbox_id, level, patch_id = get_qbox_id_hier(hier_id, qbox_geometry)
+        push!(get!(qbox_errors, (qbox_id, level, patch_id), Float64[]), errors[hier_id])
+    end
+
+    qbox_avg = Dict{Tuple{Int,Int,Int}, Float64}()
+    for (key, vals) in qbox_errors
+        qbox_avg[key] = mean(vals)
+    end
+
+    max_key, max_val = findmax(qbox_avg)
+    threshold = (1-dorfler)*max_val
+    marked_qboxes = [key for (key, avg) in qbox_avg if avg >= threshold]
+    for (qbox_id, level, patch_id) in marked_qboxes
+        refine_qbox!(qbox_geometry, level, patch_id, qbox_id)
+    end
+    return marked_qboxes
+end
+
+
+function refine_qboxgeom_max!(qbox_geometry::QBoxGeometry, errors::AbstractVector{<:Real}, dorfler::Real)
+    max_val = findmax(errors)
+    threshold = (1-dorfler)*max_val
+
+    marked_hier_ids = findall(e -> e ≥ threshold, errors)
+
+    marked_qboxes = Set{Tuple{Int,Int,Int}}()
+    for hier_id in marked_hier_ids
+        qbox_id, level, patch_id = get_qbox_id_hier(hier_id, qbox_geometry)
+        push!(marked_qboxes, (qbox_id, level, patch_id))
+    end
+
+    for (qbox_id, level, patch_id) in marked_qboxes
+        refine_qbox!(qbox_geometry, level, patch_id, qbox_id)
+    end
+    return marked_qboxes
+end
