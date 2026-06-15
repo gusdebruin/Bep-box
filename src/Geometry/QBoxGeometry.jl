@@ -80,6 +80,31 @@ function get_num_subdivisions(qbox_geometry::QBoxGeometry)
     return qbox_geometry.num_subdivisions
 end
 
+function get_num_elements(geometry::QBoxGeometry)
+    hier_geom = get_hierarchical_geometry(geometry)
+    return get_num_elements(hier_geom) 
+end
+
+function get_num_elements(geometry::QBoxGeometry, patch_id::Int)
+    hier_geom = get_hierarchical_geometry(geometry)
+    return get_num_elements(hier_geom, patch_id)
+end
+
+function get_num_elements_per_patch(geometry::QBoxGeometry)
+    hier_geom = get_hierarchical_geometry(geometry)
+    return get_num_elements_per_patch(hier_geom) 
+end
+
+function get_geometries(geometry::QBoxGeometry)
+    hier_geom = get_hierarchical_geometry(geometry)
+    return get_geometries(hier_geom)
+end
+
+function get_level_geometry(geometry::QBoxGeometry, level::Int)
+    hier_geom = get_hierarchical_geometry(geometry)
+    return get_level_geometry(hier_geom, level)
+end
+
 function get_qbox_id_hier(hier_id::Int, qbox_geometry::QBoxGeometry)
     hier_geom = get_hierarchical_geometry(qbox_geometry)
     level, level_id = Hierarchy.convert_to_level_and_level_id(get_active_elements(hier_geom), hier_id)
@@ -198,10 +223,10 @@ function refine_qboxgeom_avg!(qbox_geometry::QBoxGeometry, errors::AbstractVecto
 
     qbox_avg = Dict{Tuple{Int,Int,Int}, Float64}()
     for (key, vals) in qbox_errors
-        qbox_avg[key] = mean(vals)
+        qbox_avg[key] = sum(vals)/length(vals)
     end
 
-    max_key, max_val = findmax(qbox_avg)
+    max_val, _= findmax(qbox_avg)
     threshold = (1-dorfler)*max_val
     marked_qboxes = [key for (key, avg) in qbox_avg if avg >= threshold]
     for (qbox_id, level, patch_id) in marked_qboxes
@@ -212,7 +237,7 @@ end
 
 
 function refine_qboxgeom_max!(qbox_geometry::QBoxGeometry, errors::AbstractVector{<:Real}, dorfler::Real)
-    max_val = findmax(errors)
+    max_val,_ = findmax(errors)
     threshold = (1-dorfler)*max_val
 
     marked_hier_ids = findall(e -> e ≥ threshold, errors)
