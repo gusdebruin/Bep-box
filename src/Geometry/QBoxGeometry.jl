@@ -214,6 +214,24 @@ function refine_qbox!(qbox_geometry::QBoxGeometry, level::Int, patch_id::Int, qb
     return remove
 end
 
+function init_marked_per_level(qbox_geometry::QBoxGeometry)
+    L = get_num_levels(get_hierarchical_geometry(qbox_geometry))
+    return [Int[] for _ in 1:L]
+end
+
+function push_element_to_level!(marked_per_level::Vector{Vector{Int}}, global_id::Int, level::Int)
+    if level > length(marked_per_level)
+        resize!(marked_per_level, level)
+        for l in 1:length(marked_per_level)
+            if !isassigned(marked_per_level, l)
+                marked_per_level[l] = Int[]
+            end
+        end
+    end
+
+    push!(marked_per_level[level], global_id)
+end
+
 function refine_qboxgeom_avg!(qbox_geometry::QBoxGeometry, errors::AbstractVector{<:Real}, dorfler::Real)
     qbox_errors = Dict{Tuple{Int,Int,Int}, Vector{Float64}}()
 
@@ -230,12 +248,14 @@ function refine_qboxgeom_avg!(qbox_geometry::QBoxGeometry, errors::AbstractVecto
     max_val, _= findmax(qbox_avg)
     threshold = (1-dorfler)*max_val
     marked_qboxes = [key for (key, avg) in qbox_avg if avg >= threshold]
-    elements_that_will_be_refined = Int[]
+    marked_per_level = init_marked_per_level(qbox_geometry)
     for (qbox_id, level, patch_id) in marked_qboxes
         remove = refine_qbox!(qbox_geometry, level, patch_id, qbox_id)
-        union!(elements_that_will_be_refined, remove)
+        for global_id in remove
+            push_element_to_level!(marked_per_level, global_id, level)
+        end
     end
-    return elements_that_will_be_refined
+    return marked_per_level
 end
 
 
@@ -251,10 +271,12 @@ function refine_qboxgeom_max!(qbox_geometry::QBoxGeometry, errors::AbstractVecto
         push!(marked_qboxes, (qbox_id, level, patch_id))
     end
 
-    elements_that_will_be_refined = Int[]
+    marked_per_level = init_marked_per_level(qbox_geometry)
     for (qbox_id, level, patch_id) in marked_qboxes
         remove = refine_qbox!(qbox_geometry, level, patch_id, qbox_id)
-        union!(elements_that_will_be_refined, remove)
+        for global_id in remove
+            push_element_to_level!(marked_per_level, global_id, level)
+        end
     end
-    return elements_that_will_be_refined
+    return marked_per_level
 end
