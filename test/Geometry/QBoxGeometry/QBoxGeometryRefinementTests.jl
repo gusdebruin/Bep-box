@@ -20,12 +20,14 @@ qbg_2D = Geometry.QBoxGeometry_refine(geom_2D, qbox_size_2D, num_subdivisions_2D
 
 @testset "QBox Refinement tests 2D" begin
     error = [0.05, 0.05, 0.4, 0.3, 0.05, 0.05, 0.3, 0.4, 0.05, 0.8, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05]
-    marked_qboxes = Geometry.refine_qboxgeom_max!(qbg_2D, error, 0.1 )
-    @test marked_qboxes == Set([(3,1,1)])
+    remove = Geometry.refine_qboxgeom_max!(qbg_2D, error, 0.1 )
+    #@test remove == Set([(3,1,1)])
+    @test remove == [9,10,13,14]
     #Plot.plot(qbg_2D; vtk_filename="Refinement after max")
     error2 = [0.05, 0.05, 0.4, 0.3, 0.05, 0.05, 0.3, 0.4,0.05, 0.05, 0.05, 0.05, 0.35, 0.33,0.34, 0.34, 0.05, 0.05, 0.05, 0.05]
-    marked_qboxes2 = Geometry.refine_qboxgeom_avg!(qbg_2D, error2, 0.1 )
-    @test marked_qboxes2 == [(5,2,1),(2,1,1)]
+    remove2 = Geometry.refine_qboxgeom_avg!(qbg_2D, error2, 0.1 )
+    #@test remove2 == [(5,2,1),(2,1,1)]
+    @test remove2 == [17,18,25,26,3,4,7,8]
     #Plot.plot(qbg_2D; vtk_filename="Refinement after avg")
 end
 

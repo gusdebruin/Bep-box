@@ -211,6 +211,7 @@ function refine_qbox!(qbox_geometry::QBoxGeometry, level::Int, patch_id::Int, qb
         append!(add, get_qbox_element_ids(level+1, patch_id, qbox_geometry, child))
     end
     Hierarchy.update!(active, level, remove, add)
+    return remove
 end
 
 function refine_qboxgeom_avg!(qbox_geometry::QBoxGeometry, errors::AbstractVector{<:Real}, dorfler::Real)
@@ -229,10 +230,12 @@ function refine_qboxgeom_avg!(qbox_geometry::QBoxGeometry, errors::AbstractVecto
     max_val, _= findmax(qbox_avg)
     threshold = (1-dorfler)*max_val
     marked_qboxes = [key for (key, avg) in qbox_avg if avg >= threshold]
+    elements_that_will_be_refined = Int[]
     for (qbox_id, level, patch_id) in marked_qboxes
-        refine_qbox!(qbox_geometry, level, patch_id, qbox_id)
+        remove = refine_qbox!(qbox_geometry, level, patch_id, qbox_id)
+        union!(elements_that_will_be_refined, remove)
     end
-    return marked_qboxes
+    return elements_that_will_be_refined
 end
 
 
@@ -248,8 +251,10 @@ function refine_qboxgeom_max!(qbox_geometry::QBoxGeometry, errors::AbstractVecto
         push!(marked_qboxes, (qbox_id, level, patch_id))
     end
 
+    elements_that_will_be_refined = Int[]
     for (qbox_id, level, patch_id) in marked_qboxes
-        refine_qbox!(qbox_geometry, level, patch_id, qbox_id)
+        remove = refine_qbox!(qbox_geometry, level, patch_id, qbox_id)
+        union!(elements_that_will_be_refined, remove)
     end
-    return marked_qboxes
+    return elements_that_will_be_refined
 end
