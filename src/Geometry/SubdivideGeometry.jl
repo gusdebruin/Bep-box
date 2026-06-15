@@ -70,11 +70,27 @@ function subdivide_geometry(
     end
 end
 
-function subdivide_geometry(parent_geo::MaskedGeometry, num_subdivisions)
+function subdivide_geometry(parent_geo::MaskedGeometry{manifold_dim}, num_subdivisions) where {manifold_dim}
     parent_base_geometry = get_base_geometry(parent_geo)
+    parent_mask = get_evaluation_mask(parent_geo)
     child_base_geometry = subdivide_geometry(parent_base_geometry, num_subdivisions)
-    mask = get_evaluation_mask(parent_geo)
-    child_geometry = MaskedGeometry(child_base_geometry, mask)
+
+    num_elements = get_num_elements(parent_mask)
+    num_sub_mask = fill(num_subdivisions, num_elements)
+
+    child_mask = subdivide_evaluation_mask(parent_mask, num_sub_mask)
+    n_child = get_num_elements(child_mask)
+    element_id_map = [get_base_element(child_mask, i) for i in 1:n_child]
+    translations   = [get_translation(child_mask, i) for i in 1:n_child]
+    scalings       = [get_scaling(child_mask, i) for i in 1:n_child]
+    final_mask = Geometry.AffineEvaluationMask(
+        get_num_elements(child_mask),                     
+        get_num_elements(child_base_geometry),
+        element_id_map,
+        translations,
+        scalings
+    )
+    child_geometry = MaskedGeometry(child_base_geometry, final_mask)
 
     return child_geometry
 end
