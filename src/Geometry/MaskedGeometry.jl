@@ -50,6 +50,14 @@ function get_num_elements(geometry::MaskedGeometry)
     return get_num_elements(get_evaluation_mask(geometry))
 end
 
+function get_num_elements_per_patch(geometry::MaskedGeometry)
+    return get_num_elements_per_patch(get_base_geometry(geometry))
+end
+
+function get_num_elements_per_patch(geometry::MaskedGeometry, patch_id::Int)
+    return get_num_elements_per_patch(get_base_geometry(geometry), patch_id)
+end
+
 function get_element_lengths(geometry::MaskedGeometry, element_id::Int)
     element_id_base = get_base_element(get_evaluation_mask(geometry), element_id)
     lengths_base = get_element_lengths(get_base_geometry(geometry), element_id_base)
