@@ -54,8 +54,8 @@ function get_num_elements_per_patch(geometry::MaskedGeometry)
     return get_num_elements_per_patch(get_base_geometry(geometry))
 end
 
-function get_num_elements_per_patch(geometry::MaskedGeometry, patch_id::Int)
-    return get_num_elements_per_patch(get_base_geometry(geometry), patch_id)
+function get_num_elements(geometry::MaskedGeometry, patch_id::Int)
+    return get_num_elements(get_base_geometry(geometry), patch_id)
 end
 
 function get_element_lengths(geometry::MaskedGeometry, element_id::Int)
