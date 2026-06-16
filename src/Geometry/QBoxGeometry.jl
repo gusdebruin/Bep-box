@@ -216,7 +216,7 @@ end
 
 function init_marked_per_level(qbox_geometry::QBoxGeometry)
     L = get_num_levels(get_hierarchical_geometry(qbox_geometry))
-    return [Int[] for _ in 1:L]
+    return [Int[] for _ in 1:L+1]
 end
 
 function push_element_to_level!(marked_per_level::Vector{Vector{Int}}, global_id::Int, level::Int)
