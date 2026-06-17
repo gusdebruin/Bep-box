@@ -247,7 +247,7 @@ function refine_qboxgeom_avg!(qbox_geometry::QBoxGeometry, errors::AbstractVecto
 
     max_val, _= findmax(qbox_avg)
     threshold = (1-dorfler)*max_val
-    marked_qboxes = [key for (key, avg) in qbox_avg if avg >= threshold]
+    marked_qboxes = [key for (key, avg) in qbox_avg if avg > threshold]
     marked_per_level = init_marked_per_level(qbox_geometry)
     for (qbox_id, level, patch_id) in marked_qboxes
         remove = refine_qbox!(qbox_geometry, level, patch_id, qbox_id)
@@ -263,7 +263,7 @@ function refine_qboxgeom_max!(qbox_geometry::QBoxGeometry, errors::AbstractVecto
     max_val,_ = findmax(errors)
     threshold = (1-dorfler)*max_val
 
-    marked_hier_ids = findall(e -> e ≥ threshold, errors)
+    marked_hier_ids = findall(e -> e > threshold, errors)
 
     marked_qboxes = Set{Tuple{Int,Int,Int}}()
     for hier_id in marked_hier_ids
