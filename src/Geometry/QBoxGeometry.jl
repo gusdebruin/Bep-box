@@ -232,7 +232,7 @@ function push_element_to_level!(marked_per_level::Vector{Vector{Int}}, global_id
     push!(marked_per_level[level], global_id)
 end
 
-function refine_qboxgeom_avg!(qbox_geometry::QBoxGeometry, errors::AbstractVector{<:Real}, dorfler::Real)
+function refine_qboxgeom_avg!(qbox_geometry::QBoxGeometry, errors::AbstractVector{<:Real}, θ::Real)
     qbox_errors = Dict{Tuple{Int,Int,Int}, Vector{Float64}}()
 
     for hier_id in eachindex(errors)
@@ -246,7 +246,7 @@ function refine_qboxgeom_avg!(qbox_geometry::QBoxGeometry, errors::AbstractVecto
     end
 
     max_val, _= findmax(qbox_avg)
-    threshold = (1-dorfler)*max_val
+    threshold = (1-θ)*max_val
     marked_qboxes = [key for (key, avg) in qbox_avg if avg > threshold]
     marked_per_level = init_marked_per_level(qbox_geometry)
     for (qbox_id, level, patch_id) in marked_qboxes
@@ -259,9 +259,9 @@ function refine_qboxgeom_avg!(qbox_geometry::QBoxGeometry, errors::AbstractVecto
 end
 
 
-function refine_qboxgeom_max!(qbox_geometry::QBoxGeometry, errors::AbstractVector{<:Real}, dorfler::Real)
+function refine_qboxgeom_max!(qbox_geometry::QBoxGeometry, errors::AbstractVector{<:Real}, θ::Real)
     max_val,_ = findmax(errors)
-    threshold = (1-dorfler)*max_val
+    threshold = (1-θ)*max_val
 
     marked_hier_ids = findall(e -> e > threshold, errors)
 
