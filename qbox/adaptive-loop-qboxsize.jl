@@ -41,7 +41,7 @@ geometry = Geometry.CartesianGeometry((
     LinRange(0, 1, 13),
     LinRange(0, 1, 13),
 ))
-qbox_size        = (2,2)
+qbox_size        = (3,3)
 num_subdivisions = (2,2)
 @show Geometry.get_num_elements(geometry)
 qbg = Geometry.QBoxGeometry_from_existing(geometry, qbox_size, num_subdivisions)
@@ -84,7 +84,7 @@ B = bspline_space_on_geometry(geom_qbg, p, k)
 H = FunctionSpaces.HierarchicalFiniteElementSpace(B, num_subdivisions)
 #@show FunctionSpaces.get_num_elements(H)
 
-Mantis.Plot.plot(qbg; vtk_filename="Starting Geometry Poisson QBOX (1,1)")
+Mantis.Plot.plot(qbg; vtk_filename="Starting Geometry Poisson QBOX (3,3)")
 
 #=
 To set up our adaptive loop we also need to define a few other things:
@@ -261,17 +261,17 @@ computed and analytical solutions.
 uₕ, u, dofs_history, error_history = adaptive_loop(H, N, θ)
 
 # To finish it off we export the results so we can take a look at them.
-Plot.export_form_fields_to_vtk((uₕ, u), "Adaptive-Poisson (1,1)")
+Plot.export_form_fields_to_vtk((uₕ, u), "Adaptive-Poisson (3,3)")
 
 
 # Plot 1: DOFs vs fout (log-log)
 fig1 = CM.Figure()
 ax1 = CM.Axis(fig1[1,1],
-    xlabel = "Aantal DOFs",
-    ylabel = "L² fout",
-    title  = "Convergentie adaptieve verfijning",
-    xscale = log10
+    xlabel = "Total DOFs",
+    ylabel = "L² error",
+    title  = "Convergence adaptive refinement",
+    yscale = log10
 )
 CM.lines!(ax1, dofs_history, error_history)
 CM.scatter!(ax1, dofs_history, error_history)
-CM.save("convergentie(1,1).png", fig1)
+CM.save("convergentie(3,3).png", fig1)

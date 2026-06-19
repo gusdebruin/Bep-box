@@ -1,5 +1,5 @@
 using Mantis
-
+import CairoMakie as CM
 ############################################################################################
 #                                   Problem Description                                    #
 ############################################################################################
@@ -35,7 +35,7 @@ geometry:
 =#
 const starting_point = (0.0, 0.0)
 const box_size = (1.0, 1.0)
-const num_elements = (10, 10)
+const num_elements = (12, 12)
 #=
 Then, we define the parameters for the B-spline spaces of each level:
 =#
@@ -50,13 +50,15 @@ num_subdivisions = (2, 2)
 B = FunctionSpaces.create_bspline_space(starting_point, box_size, num_elements, p, k)
 H = FunctionSpaces.HierarchicalFiniteElementSpace(B, num_subdivisions)
 
+Mantis.Plot.plot(FunctionSpaces.get_geometry(H); vtk_filename="Starting Geometry Poisson no QBox")
+
 #=
 To set up our adaptive loop we also need to define a few other things:
 
 1. The number of steps in the adaptive loop.
 2. The Dörfler parameter to specify how many elements get refined.
 =#
-N = 6 # Number of steps.
+N = 10 # Number of steps.
 θ = 0.20 # Dörfler parameter.
 
 ############################################################################################
@@ -104,6 +106,8 @@ we will include various comments inside the function.
 function adaptive_loop(H, N, θ)
     # To keep track of what our code is doing, we will print things like the line below:
     println("Solving the problem on the initial step...")
+    dofs_history = Int[]
+    error_history = Float64[]
 
     #=
     Before we defined `qr`, which is the quadrature rule for a single element. Now we just
@@ -135,6 +139,8 @@ function adaptive_loop(H, N, θ)
     err = Analysis.compute_error_per_element(uₕ, u, Q)
     # We can also take a look at what is the total error we got:
     total_err = sqrt(sum(e -> e^2, err))
+    push!(dofs_history, FunctionSpaces.get_num_basis(H))
+    push!(error_history, total_err)
     @show total_err
 
     # Now we just repeat what we did above, while refining the space at each step.
@@ -166,10 +172,14 @@ function adaptive_loop(H, N, θ)
 
         err = Analysis.compute_error_per_element(uₕ, u, Q)
         total_err = sqrt(sum(e -> e^2, err))
+        push!(dofs_history, FunctionSpaces.get_num_basis(H))
+        push!(error_history, total_err)
         @show total_err
     end
+    @show dofs_history
+    @show error_history
 
-    return uₕ, u
+    return uₕ, u, dofs_history, error_history
 end
 
 ############################################################################################
@@ -181,7 +191,20 @@ end
 To get the results from our adaptive loop we just need to call it. It will give us both the
 computed and analytical solutions.
 =#
-uₕ, u = adaptive_loop(H, N, θ)
+uₕ, u, dofs_history, error_history = adaptive_loop(H, N, θ)
 
 # To finish it off we export the results so we can take a look at them.
-Plot.export_form_fields_to_vtk((uₕ, u), "Adaptive-Poisson")
+Plot.export_form_fields_to_vtk((uₕ, u), "Adaptive-Poisson no QBox")
+
+
+# Plot 1: DOFs vs fout (log-log)
+fig1 = CM.Figure()
+ax1 = CM.Axis(fig1[1,1],
+    xlabel = "Total DOFs",
+    ylabel = "L² error",
+    title  = "Convergence adaptive refinement",
+    yscale = log10
+)
+CM.lines!(ax1, dofs_history, error_history)
+CM.scatter!(ax1, dofs_history, error_history)
+CM.save("convergentie no QBox.png", fig1)
